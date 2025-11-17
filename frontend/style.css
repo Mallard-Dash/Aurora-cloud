@@ -1,0 +1,42 @@
+/* Custom styles for graphical richness and font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Custom Scrollbar for the dark theme */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1f2937; /* Gray-800 */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4f46e5; /* Indigo-600 */
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #6366f1; /* Indigo-500 */
+}
+
+/* Gradient Accent (for the hero sections or login card border) */
+.gradient-border {
+    border: 2px solid transparent;
+    border-radius: 16px;
+    background-clip: padding-box;
+    position: relative;
+}
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    z-index: -1;
+    margin: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #4f46e5 0%, #a855f7 100%); /* Indigo to Violet */
+}
