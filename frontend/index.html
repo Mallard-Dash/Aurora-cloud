@@ -1,83 +1,95 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="sv">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aurora-cloud Portal</title>
-    <!-- Load Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Custom Styles -->
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aurora — Terminal & Admin</title>
+
+  <!-- Din befintliga CSS -->
+  <link rel="stylesheet" href="/static/style.css" />
+
+  <!-- xterm.js CSS (CDN) -->
+  <link rel="stylesheet" href="https://unpkg.com/xterm/css/xterm.css" />
+
+  <style>
+    /* Liten tilläggs-styling för layouten; hålls neutral */
+    :root {
+      --topbar-bg: #0f1724;
+      --panel-bg: #071024;
+      --muted: #9aa4b2;
+    }
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: #061021; color: #e6eef6; }
+    #topbar { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--topbar-bg); border-bottom:1px solid rgba(255,255,255,0.02); }
+    .brand { font-weight:700; letter-spacing:0.4px; }
+    .nav { display:flex; gap:8px; margin-left:16px; }
+    .nav button { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.03); padding:6px 10px; border-radius:6px; cursor:pointer; }
+    .nav button.active { background:#0b1220; color:#dbeafe; border-color: rgba(255,255,255,0.06); }
+    .right { margin-left:auto; display:flex; gap:8px; align-items:center; color:var(--muted); font-size:14px; }
+    #main { display:flex; height: calc(100vh - 52px); }
+    #sidebar { width:260px; border-right:1px solid rgba(255,255,255,0.02); padding:12px; background: #071225; box-sizing:border-box; }
+    #content { flex:1; display:flex; flex-direction:column; }
+    .panel { flex:1; padding:10px; box-sizing:border-box; background:var(--panel-bg); display:none; overflow:auto; }
+    .panel.active { display:block; }
+    /* terminal container */
+    #terminalContainer { height:100%; width:100%; border-radius:6px; overflow:hidden; background: #000; }
+    .small { font-size:13px; color:var(--muted); }
+    .btn { background:#0b1220; border:1px solid rgba(255,255,255,0.03); padding:6px 10px; border-radius:6px; color:#e6eef6; cursor:pointer; }
+  </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex">
+<body>
+  <div id="topbar">
+    <div class="brand">Aurora</div>
 
-    <!-- Login Page Container (Default View) -->
-    <div id="login-container" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-50 transition-opacity duration-500">
-        <div class="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-2xl shadow-2xl gradient-border">
-            <div class="text-center">
-                <!-- Cloud Icon SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-cloud mx-auto text-indigo-400 mb-2">
-                    <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
-                </svg>
-                <h1 class="text-3xl font-extrabold text-white">Aurora-cloud Portal</h1>
-                <p class="mt-2 text-sm text-gray-400">Sign in to manage your server artifacts.</p>
-            </div>
-            <form id="login-form" class="mt-8 space-y-6">
-                <div class="space-y-4">
-                    <input type="text" id="username-input" placeholder="Username (e.g., root)" required class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500">
-                    <input type="password" id="password-input" placeholder="Password (e.g., ChangeMeNow!)" required class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-indigo-500 focus:border-indigo-500">
-                </div>
-                <p id="login-error" class="text-sm text-red-400 text-center hidden"></p>
-                <div>
-                    <button type="submit" id="login-button" class="w-full flex justify-center py-3 px-4 rounded-lg shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
-                        Sign In
-                    </button>
-                </div>
-            </form>
-            <div class="text-center text-xs text-gray-500 pt-4 border-t border-gray-700/50">
-                <p>Designed for the FastAPI Server Portal.</p>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Main Application Container (Hidden until authenticated) -->
-    <div id="app-container" class="min-h-screen bg-gray-900 font-inter text-white flex w-full hidden">
-        
-        <!-- Sidebar -->
-        <div id="sidebar" class="w-64 bg-gray-800 flex flex-col p-4 shadow-xl border-r border-gray-700/50">
-            <div class="flex items-center mb-10 mt-4">
-                <!-- Cloud Icon SVG -->
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-cloud text-indigo-400 mr-2">
-                    <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
-                </svg>
-                <span class="text-xl font-extrabold text-white">Aurora-cloud</span>
-            </div>
-            <nav id="nav-list" class="flex-grow space-y-2">
-                <!-- Navigation items injected here -->
-            </nav>
-            <div class="mt-8 pt-4 border-t border-gray-700">
-                <button onclick="handleSignOut()" class="flex items-center w-full px-4 py-3 rounded-xl text-left text-red-400 hover:bg-red-900/50 transition duration-200">
-                    <!-- LogOut Icon SVG -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-log-out mr-3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-                    Sign Out
-                </button>
-            </div>
-        </div>
-
-        <!-- Main Content Area -->
-        <main class="flex-1 p-6 lg:p-10 overflow-y-auto">
-            <header class="mb-8 pb-4 border-b border-gray-700/50">
-                <h1 id="page-title" class="text-3xl font-bold capitalize">System Metrics</h1>
-                <p id="page-subtitle" class="text-sm text-gray-400 mt-1">View and manage your server status and resources.</p>
-            </header>
-            
-            <div id="main-content">
-                <!-- Page content injected here -->
-            </div>
-        </main>
+    <div class="nav" role="navigation" aria-label="Main">
+      <button data-target="terminal" class="active">Terminal</button>
+      <button data-target="metrics">Metrics</button>
+      <button data-target="files">Files</button>
+      <button data-target="minecraft">Minecraft</button>
     </div>
 
-    <!-- Load JavaScript -->
-    <script src="script.js"></script>
+    <div class="right">
+      <div class="small">Connected via Tailscale</div>
+      <button id="reconnectBtn" class="btn">Reconnect</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="sidebar">
+      <div style="margin-bottom:10px;"><strong>Quick actions</strong></div>
+      <button id="sendCtrlC" class="btn" style="width:100%; margin-bottom:8px;">Send Ctrl-C</button>
+      <button id="clearTerminal" class="btn" style="width:100%; margin-bottom:8px;">Clear Terminal</button>
+      <div style="margin-top:12px;" class="small">Token: lokal auth för WS</div>
+      <input id="tokenInput" placeholder="Skriv token eller lämna tom" style="width:100%; margin-top:6px; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.03); background:#071823; color:#e6eef6;" />
+      <button id="saveToken" class="btn" style="width:100%; margin-top:8px;">Spara token</button>
+    </div>
+
+    <div id="content">
+      <div id="terminal" class="panel active">
+        <div id="terminalContainer" aria-label="Terminal"></div>
+      </div>
+
+      <div id="metrics" class="panel" >
+        <h3>Metrics</h3>
+        <div id="metricsContent" class="small">Här kan du koppla dina metrics UI (Grafana/Prometheus) — placeholder.</div>
+      </div>
+
+      <div id="files" class="panel">
+        <h3>File manager</h3>
+        <div id="filesContent" class="small">Filsystem UI placeholder — återanslut din befintliga filhanterare här.</div>
+      </div>
+
+      <div id="minecraft" class="panel">
+        <h3>Minecraft</h3>
+        <div id="minecraftContent" class="small">Minecraft controls placeholder (start/stop, RCON etc).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- xterm + fit addon -->
+  <script src="https://unpkg.com/xterm/lib/xterm.js"></script>
+  <script src="https://unpkg.com/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+
+  <!-- Your frontend logic -->
+  <script src="/static/app.js"></script>
 </body>
 </html>

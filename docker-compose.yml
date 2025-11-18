@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:latest
+    restart: unless-stopped
+    ports:
+      - "8590:80"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - portal-net
+    depends_on:
+      - backend
+      - frontend
+
+  backend:
+    build: ./backend
+    container_name: portal-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=sqlite:////data/portal.db
+      - STORAGE_PATH=/data/storage
+      - SECRET_KEY=change_me_in_production_please_12345
+      - ROOT_PASSWORD=ChangeMeNow!
+    volumes:
+      - portal_data:/data
+    networks:
+      - portal-net
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    container_name: portal-frontend
+    restart: unless-stopped
+    networks:
+      - portal-net
+    expose:
+      - "80"
+
+volumes:
+  portal_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  portal-net:
+    driver: bridge

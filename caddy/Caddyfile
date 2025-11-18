@@ -1,0 +1,26 @@
+:80 {
+    encode gzip
+    
+    # API routes - reverse proxy to backend
+    route /api/* {
+        reverse_proxy backend:8000
+    }
+
+    # Health check route
+    route /health {
+        reverse_proxy backend:8000
+    }
+
+    # Metrics route for Prometheus
+    route /metrics {
+        reverse_proxy backend:8000
+    }
+
+    # WebSocket support for terminal
+    route /ws/* {
+        reverse_proxy backend:8000
+    }
+
+    # Frontend - reverse proxy to nginx frontend container
+    reverse_proxy * frontend:80
+}
