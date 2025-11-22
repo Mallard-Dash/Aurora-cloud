@@ -3,3 +3,4 @@ __pycache__/
 .env
 *.tar.gz
 .DS_Store
+token.txt
