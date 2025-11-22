@@ -430,4 +430,51 @@ docker compose logs -f backend
 * [ ] Decide whether Minecraft is containerized or host-managed; create systemd unit if host-managed.
 * [ ] Configure Grafana datasource and dashboards to point at backend metrics.
 
+Server names:
+* Aurora-Ymir-1
+*Aurora-Ymir-2
+*Aurora-Frostbyte-(AF1)
+*Aurora-Frostbyte-(AF2)
+
+Mer namn som kan komma att användas:
+Nordiskt/aurora-tema (perfekt för ditt brand)
+
+aurora-zenith-1 (AZ-1)
+
+aurora-hyperion-1 (AH-1)
+
+
+⚡ Mer “datacenter/energi”-känsla
+
+AUR-NOVA-
+
+AUR-PULSE-
+
+AUR-QUASAR-
+
+AUR-LUMIN-
+
+AUR-ION-
+
+🌌 Mer atmosfäriskt/himmelsinspirerat
+
+aurora-stratos-
+
+aurora-celest-
+
+aurora-halo-
+
+aurora-solstice-
+
+aurora-eclipse-
+
+🧊 Extra nordisk/mytologi-touch
+aurora-mimir-
+
+aurora-fenrir-
+
+aurora-jotun-
+
+aurora-odin-
+
 ---

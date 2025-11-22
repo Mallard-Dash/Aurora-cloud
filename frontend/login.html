@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Aurora — Access Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root{--bg-deep:#030712;--primary:#8b5cf6;--accent:#38bdf8;--success:#10b981;--danger:#ef4444;--text-main:#f3f4f6;--text-muted:#9ca3af;--glass-border:rgba(255,255,255,0.08);--glow-shadow:0 0 20px rgba(139,92,246,0.2);--font-sans:'Inter',sans-serif;--font-mono:'JetBrains Mono',monospace}*{box-sizing:border-box}body{margin:0;font-family:var(--font-sans);background-color:var(--bg-deep);color:var(--text-main);overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center}#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;pointer-events:none}.login-wrapper{width:100%;max-width:400px;padding:20px;animation:fadeIn .8s ease-out}.glass-panel{background:rgba(17,24,39,.65);backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:16px;padding:40px;box-shadow:0 25px 50px -12px rgba(0,0,0,.5);position:relative;overflow:hidden}.glass-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--primary),transparent);opacity:.5}.brand{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;color:#fff}.brand-text{font-size:24px;font-weight:700;letter-spacing:-.02em;text-shadow:0 0 15px rgba(139,92,246,.5)}.brand-icon{color:var(--primary);filter:drop-shadow(0 0 8px var(--primary));width:32px;height:32px}.subtitle{text-align:center;color:var(--text-muted);font-size:13px;margin-bottom:32px;letter-spacing:.05em;text-transform:uppercase}.form-group{margin-bottom:20px}.input-label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:8px;margin-left:2px}.input-wrapper{position:relative;display:flex;align-items:center}.input-icon{position:absolute;left:12px;color:var(--text-muted);width:16px;height:16px;transition:color .2s}.form-input{width:100%;background:rgba(0,0,0,.3);border:1px solidvar(--glass-border);border-radius:8px;padding:12px 12px 12px 38px;color:#fff;font-family:var(--font-sans);font-size:14px;transition:all .2s;outline:none}.form-input:focus{border-color:var(--primary);background:rgba(139,92,246,.05);box-shadow:0 0 0 4px rgba(139,92,246,.1)}.form-input:focus + .input-icon{color:var(--primary)}.btn-login{width:100%;background:var(--primary);color:white;border:none;border-radius:8px;padding:12px;font-weight:600;font-size:14px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}.btn-login:hover{background:#7c3aed;box-shadow:0 0 20px rgba(139,92,246,.4);transform:translateY(-1px)}.btn-login:active{transform:translateY(0)}.error-msg{color:var(--danger);font-size:13px;text-align:center;margin-top:15px;min-height:20px;opacity:0;transition:opacity .3s}@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-radius:50%;border-top-color:#fff;animation:spin 1s ease-in-out infinite;display:none}@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div class="login-wrapper">
+<div class="glass-panel">
+<div class="brand">
+<i data-lucide="hexagon" class="brand-icon"></i>
+<span class="brand-text">AURORA</span>
+</div>
+<div class="subtitle">Neural Command Access</div>
+<form id="loginForm">
+<div class="form-group">
+<label class="input-label">Identity</label>
+<div class="input-wrapper">
+<i data-lucide="user" class="input-icon"></i>
+<input type="text" id="username" class="form-input" placeholder="Username" required autocomplete="username" value="aurora">
+</div>
+</div>
+<div class="form-group">
+<label class="input-label">Passcode</label>
+<div class="input-wrapper">
+<i data-lucide="lock" class="input-icon"></i>
+<input type="password" id="password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+</div>
+</div>
+<button type="submit" class="btn-login" id="loginBtn">
+<span class="btn-text">Establish Link</span>
+<div class="spinner"></div>
+<i data-lucide="arrow-right" class="btn-icon" style="width:16px"></i>
+</button>
+<div class="error-msg" id="errorMsg">Invalid credentials provided.</div>
+</form>
+</div>
+</div>
+<script>
+lucide.createIcons();
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let width, height, particles = [];
+function resize(){ width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+class Particle{ constructor(){ this.x=Math.random()*width; this.y=Math.random()*height; this.vx=(Math.random()-0.5)*0.4; this.vy=(Math.random()-0.5)*0.4; this.size=Math.random()*2+1 } update(){ this.x+=this.vx; this.y+=this.vy; if(this.x<0)this.x=width; if(this.x>width)this.x=0;if(this.y<0)this.y=height; if(this.y>height)this.y=0 } draw(){ ctx.fillStyle='rgba(139,92,246,0.4)'; ctx.beginPath(); ctx.arc(this.x,this.y,this.size,0,Math.PI*2); ctx.fill() } }
+function initParticles(){ resize(); particles=[]; const count=Math.floor((width*height)/15000); for(let i=0;i<count;i++)particles.push(new Particle()) }
+function animate(){ ctx.clearRect(0,0,width,height); ctx.strokeStyle='rgba(139,92,246,0.15)';ctx.lineWidth=1; for(let i=0;i<particles.length;i++){ let p1=particles[i]; p1.update(); p1.draw(); for(let j=i+1;j<particles.length;j++){ let p2=particles[j]; let dx=p1.x-p2.x; let dy=p1.y-p2.y; let dist=Math.sqrt(dx*dx+dy*dy); if(dist<120){ ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); } } } requestAnimationFrame(animate) }
+window.addEventListener('resize',()=>{ resize(); initParticles(); }); initParticles(); animate();
+
+const loginForm = document.getElementById('loginForm');
+const loginBtn = document.getElementById('loginBtn');
+const spinner = document.querySelector('.spinner');
+const btnText = document.querySelector('.btn-text');
+const btnIcon = document.querySelector('.btn-icon');
+const errorMsg = document.getElementById('errorMsg');
+
+function setLoading(on){
+if(on){ btnText.style.display='none'; btnIcon.style.display='none'; spinner.style.display='block'; loginBtn.disabled=true; errorMsg.style.opacity='0'; }
+else { btnText.style.display='block'; btnIcon.style.display='block'; spinner.style.display='none'; loginBtn.disabled=false; }
+}
+
+loginForm.addEventListener('submit', async (e) => {
+e.preventDefault();
+setLoading(true);
+errorMsg.style.opacity='0';
+const username = document.getElementById('username').value.trim();
+const password = document.getElementById('password').value;
+if(!username || !password){ errorMsg.textContent = 'Required fields missing'; errorMsg.style.opacity='1'; setLoading(false); return; }
+try {
+const resp = await fetch('/api/auth/login', {
+method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password })
+});
+if(!resp.ok){
+const json = await resp.json().catch(()=>null);
+const detail = json && (json.detail || json.message) ? (json.detail || json.message) : resp.statusText;
+throw new Error(detail || ('HTTP '+resp.status));
+}
+const body = await resp.json();
+if(!body.access_token) throw new Error('Token missing');
+localStorage.setItem('aurora_token', body.access_token);
+window.location.href = '/';
+} catch (err) {
+errorMsg.textContent = 'Access Denied';
+errorMsg.style.opacity = '1';
+loginBtn.style.animation = 'shake .5s';
+setTimeout(()=> loginBtn.style.animation = '', 500);
+} finally { setLoading(false); }
+});
+const styleSheet = document.createElement("style");
+styleSheet.innerText = `@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}`;
+document.head.appendChild(styleSheet);
+</script>
+</body>
+</html>

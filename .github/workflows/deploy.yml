@@ -1,0 +1,50 @@
+name: Deploy Aurora
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Här kan du lägga till test-steg senare (t.ex. pytest)
+    # - name: Run Tests
+    #   run: |
+    #     pip install pytest
+    #     pytest
+
+    - name: Deploy to Server via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: 22
+        script: |
+          # 1. Gå till projektmappen
+          cd /home/aurora/aurora-repo || git clone https://github.com/DITT_GITHUB_NAMN/aurora-server.git /home/aurora/aurora-repo
+          
+          # 2. Hämta senaste ändringarna
+          cd /home/aurora/aurora-repo
+          git pull origin main
+          
+          # 3. Uppdatera Backend
+          # Kopiera filer från repot till den "levande" backend-mappen
+          rsync -av --exclude='.git' ./backend/ /home/aurora/aurora/backend/
+          
+          # 4. Uppdatera Frontend
+          # Kopiera index.html till Nginx-mappen (kräver att användaren 'aurora' har skrivrättigheter här)
+          cp ./frontend/index.html /var/www/aurora/index.html
+          
+          # 5. Installera nya dependencies om de finns
+          source /home/aurora/aurora/.venv/bin/activate
+          pip install -r ./backend/requirements.txt
+          
+          # 6. Starta om tjänsten (kräver sudo utan lösenord för systemctl, se nedan*)
+          sudo systemctl restart aurora
+          
+          echo "Deployment successful! 🚀"

@@ -1,95 +1,1117 @@
-<!doctype html>
-<html lang="sv">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aurora — Terminal & Admin</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aurora Server Portal</title>
+    
+    <!-- AUTH CHECK -->
+    <script>
+        try {
+            const token = localStorage.getItem('aurora_token');
+            if (!token && window.location.pathname !== '/login.html' && window.location.hostname !== 'localhost' && window.location.protocol !== 'blob:') {
+                 // window.location.href = '/login.html';
+            }
+        } catch (e) { console.warn("Auth check skipped"); }
+    </script>
 
-  <!-- Din befintliga CSS -->
-  <link rel="stylesheet" href="/static/style.css" />
-
-  <!-- xterm.js CSS (CDN) -->
-  <link rel="stylesheet" href="https://unpkg.com/xterm/css/xterm.css" />
-
-  <style>
-    /* Liten tilläggs-styling för layouten; hålls neutral */
-    :root {
-      --topbar-bg: #0f1724;
-      --panel-bg: #071024;
-      --muted: #9aa4b2;
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?deps=react@18.2.0",
+            "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@18.2.0"
+        }
     }
-    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: #061021; color: #e6eef6; }
-    #topbar { display:flex; align-items:center; gap:12px; padding:10px 14px; background:var(--topbar-bg); border-bottom:1px solid rgba(255,255,255,0.02); }
-    .brand { font-weight:700; letter-spacing:0.4px; }
-    .nav { display:flex; gap:8px; margin-left:16px; }
-    .nav button { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.03); padding:6px 10px; border-radius:6px; cursor:pointer; }
-    .nav button.active { background:#0b1220; color:#dbeafe; border-color: rgba(255,255,255,0.06); }
-    .right { margin-left:auto; display:flex; gap:8px; align-items:center; color:var(--muted); font-size:14px; }
-    #main { display:flex; height: calc(100vh - 52px); }
-    #sidebar { width:260px; border-right:1px solid rgba(255,255,255,0.02); padding:12px; background: #071225; box-sizing:border-box; }
-    #content { flex:1; display:flex; flex-direction:column; }
-    .panel { flex:1; padding:10px; box-sizing:border-box; background:var(--panel-bg); display:none; overflow:auto; }
-    .panel.active { display:block; }
-    /* terminal container */
-    #terminalContainer { height:100%; width:100%; border-radius:6px; overflow:hidden; background: #000; }
-    .small { font-size:13px; color:var(--muted); }
-    .btn { background:#0b1220; border:1px solid rgba(255,255,255,0.03); padding:6px 10px; border-radius:6px; color:#e6eef6; cursor:pointer; }
-  </style>
+    </script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animations */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.5)); }
+            50% { opacity: 0.5; filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.2)); }
+        }
+        .animate-pulse-glow { animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+        body { background-color: #020617; color: #e2e8f0; }
+    </style>
 </head>
-<body>
-  <div id="topbar">
-    <div class="brand">Aurora</div>
+<body class="overflow-hidden selection:bg-cyan-500/30">
 
-    <div class="nav" role="navigation" aria-label="Main">
-      <button data-target="terminal" class="active">Terminal</button>
-      <button data-target="metrics">Metrics</button>
-      <button data-target="files">Files</button>
-      <button data-target="minecraft">Minecraft</button>
-    </div>
+    <div id="root"></div>
 
-    <div class="right">
-      <div class="small">Connected via Tailscale</div>
-      <button id="reconnectBtn" class="btn">Reconnect</button>
-    </div>
-  </div>
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef, useMemo } from 'react';
+        import ReactDOM from 'react-dom/client';
+        import { 
+          Activity, Cpu, Database, MessageSquare, Server, User, Users, Play, Square, HardDrive, 
+          Terminal, RotateCcw, Wifi, MemoryStick, LogOut, ChevronRight, Settings, 
+          AlertCircle, Pickaxe, ChevronDown, Check, Zap, Globe, Gauge, Disc, ShieldCheck,
+          Sun, Cloud, CloudRain, Moon, Wind, Save, Plus, Trash2, Calendar as CalendarIcon, 
+          CheckCircle, Clock, Bell, X, ChevronLeft, MapPin, Home, Brain, Send,
+          Folder, File, FileCode, Image as ImageIcon, Film, Upload, Download, Search, Lock, Camera, FileText
+        } from 'lucide-react';
 
-  <div id="main">
-    <div id="sidebar">
-      <div style="margin-bottom:10px;"><strong>Quick actions</strong></div>
-      <button id="sendCtrlC" class="btn" style="width:100%; margin-bottom:8px;">Send Ctrl-C</button>
-      <button id="clearTerminal" class="btn" style="width:100%; margin-bottom:8px;">Clear Terminal</button>
-      <div style="margin-top:12px;" class="small">Token: lokal auth för WS</div>
-      <input id="tokenInput" placeholder="Skriv token eller lämna tom" style="width:100%; margin-top:6px; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.03); background:#071823; color:#e6eef6;" />
-      <button id="saveToken" class="btn" style="width:100%; margin-top:8px;">Spara token</button>
-    </div>
+        // --- CONFIG & API ---
+        const API_BASE = '/api';
+        
+        const authFetch = async (endpoint, options = {}) => {
+            const token = localStorage.getItem('aurora_token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...options.headers
+            };
 
-    <div id="content">
-      <div id="terminal" class="panel active">
-        <div id="terminalContainer" aria-label="Terminal"></div>
-      </div>
+            try {
+                if (window.location.protocol === 'blob:') {
+                    throw new Error("Blob context detected");
+                }
+                const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+                if (res.status === 401) {
+                    localStorage.removeItem('aurora_token');
+                    window.location.href = '/login.html';
+                    return null;
+                }
+                return res;
+            } catch (error) {
+                return null;
+            }
+        };
 
-      <div id="metrics" class="panel" >
-        <h3>Metrics</h3>
-        <div id="metricsContent" class="small">Här kan du koppla dina metrics UI (Grafana/Prometheus) — placeholder.</div>
-      </div>
+        // --- DATA CONSTANTS ---
+        const SERVER_LIST = [
+            { id: 'ymir1', name: 'Aurora-Ymir-1', region: 'eu-north-1', online: true },
+            { id: 'ymir2', name: 'Aurora-Ymir-2', region: 'eu-central-1', online: false },
+            { id: 'frost1', name: 'Aurora-Frostbyte-(AF1)', region: 'us-east-1', online: true },
+            { id: 'frost2', name: 'Aurora-Frostbyte-(AF2)', region: 'us-west-2', online: true },
+        ];
 
-      <div id="files" class="panel">
-        <h3>File manager</h3>
-        <div id="filesContent" class="small">Filsystem UI placeholder — återanslut din befintliga filhanterare här.</div>
-      </div>
+        const INITIAL_FILES = [
+            { id: 'root', name: 'root', type: 'folder', children: ['f1', 'f2', 'd1', 'd2'] },
+            { id: 'f1', name: 'Project_Alpha', type: 'folder', parent: 'root', children: ['doc1', 'img1', 'code1'] },
+            { id: 'f2', name: 'Backups', type: 'folder', parent: 'root', children: ['arc1'] },
+            { id: 'logs_folder', name: 'Captains Logs', type: 'folder', parent: 'root' }, 
+            { id: 'd1', name: 'manifesto.txt', type: 'doc', size: 1024 * 12, parent: 'root' },
+            { id: 'd2', name: 'budget_2025.pdf', type: 'doc', size: 1024 * 1024 * 4.2, parent: 'root' },
+            { id: 'doc1', name: 'specs.docx', type: 'doc', size: 1024 * 200, parent: 'f1' },
+            { id: 'img1', name: 'schematic_v2.png', type: 'image', size: 1024 * 1024 * 12, parent: 'f1' },
+            { id: 'code1', name: 'main.py', type: 'code', size: 1024 * 8, parent: 'f1' },
+            { id: 'arc1', name: 'full_backup.tar.gz', type: 'archive', size: 1024 * 1024 * 1024 * 2.1, parent: 'f2' },
+        ];
 
-      <div id="minecraft" class="panel">
-        <h3>Minecraft</h3>
-        <div id="minecraftContent" class="small">Minecraft controls placeholder (start/stop, RCON etc).</div>
-      </div>
-    </div>
-  </div>
+        const MOCK_LOGS = [
+          "[Server thread/INFO]: Starting minecraft server version 1.20.4",
+          "[Server thread/INFO]: Loading properties",
+          "[Server thread/INFO]: Default game type: SURVIVAL",
+          "[Server thread/INFO]: Generating keypair",
+          "[Server thread/INFO]: Starting Minecraft server on *:25565",
+          "[Server thread/INFO]: Using default channel type",
+          "[Server thread/INFO]: Preparing level 'world'",
+          "[Server thread/INFO]: Preparing start region for dimension minecraft:overworld",
+          "[Server thread/INFO]: Time elapsed: 2345ms",
+          "[Server thread/INFO]: Done (4.821s)! For help, type 'help'"
+        ];
 
-  <!-- xterm + fit addon -->
-  <script src="https://unpkg.com/xterm/lib/xterm.js"></script>
-  <script src="https://unpkg.com/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+        // --- SHARED UTILS ---
+        const generateForecast = () => {
+          const hours = [];
+          for (let i = 0; i < 8; i++) {
+            const time = new Date();
+            time.setHours(time.getHours() + i * 3);
+            hours.push({
+              time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              temp: Math.floor(Math.random() * (20 - 10) + 10),
+              condition: ['sunny', 'cloudy', 'rainy', 'partly'][Math.floor(Math.random() * 4)]
+            });
+          }
+          return hours;
+        };
 
-  <!-- Your frontend logic -->
-  <script src="/static/app.js"></script>
+        const getGreeting = () => {
+          const hour = new Date().getHours();
+          if (hour >= 4 && hour < 9) return "Good morning";
+          if (hour >= 9 && hour < 12) return "Good day";
+          if (hour >= 12 && hour < 17) return "Good afternoon";
+          if (hour >= 17 && hour < 22) return "Good evening";
+          return "Good night";
+        };
+
+        const mapWeatherCode = (code) => {
+            if (code === 0) return 'sunny'; 
+            if (code >= 1 && code <= 3) return 'partly'; 
+            if (code >= 51 && code <= 99) return 'rainy'; 
+            return 'cloudy';
+        };
+
+        // --- SHARED COMPONENTS ---
+
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-red-500 p-10 font-mono flex-col gap-4">
+                            <AlertCircle size={48} />
+                            <h1 className="text-2xl font-bold">SYSTEM CRITICAL FAILURE</h1>
+                            <p className="bg-black p-4 rounded border border-red-900/50 text-sm opacity-80">{this.state.error.toString()}</p>
+                            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-red-900/20 border border-red-500 hover:bg-red-500 hover:text-white transition-colors uppercase tracking-widest text-xs">Reboot System</button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        const CyberCard = ({ children, title, className = "", actionButton = null, icon: Icon }) => (
+          <div className={`relative bg-slate-900/80 backdrop-blur-md border border-slate-800/60 rounded-sm overflow-hidden group flex flex-col ${className}`}>
+            <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-emerald-500/50" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-emerald-500/50" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-emerald-500/50" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-emerald-500/50" />
+
+            {(title || actionButton || Icon) && (
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-white/5 shrink-0">
+                <div className="flex items-center gap-2">
+                    {Icon && <Icon size={14} className="text-emerald-400" />}
+                    <h3 className="text-xs font-mono font-bold tracking-[0.2em] text-emerald-400/80 uppercase">{title}</h3>
+                </div>
+                {actionButton}
+              </div>
+            )}
+            
+            <div className="p-4 relative z-10 h-full flex flex-col overflow-hidden">
+              {children}
+            </div>
+
+            <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none" 
+                 style={{ 
+                   backgroundImage: 'linear-gradient(rgba(16, 185, 129, 1) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 185, 129, 1) 1px, transparent 1px)', 
+                   backgroundSize: '40px 40px' 
+                 }}>
+            </div>
+          </div>
+        );
+
+        const GlowCard = ({ children, title, icon: Icon, className = "" }) => (
+          <div className={`relative bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-lg overflow-hidden group hover:border-cyan-500/50 transition-colors duration-500 ${className}`}>
+            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-cyan-500/50 rounded-tl-sm" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-cyan-500/50 rounded-tr-sm" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-cyan-500/50 rounded-bl-sm" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-cyan-500/50 rounded-br-sm" />
+            <div className="flex items-center gap-2 p-3 border-b border-white/5 bg-white/5">
+              {Icon && <Icon size={16} className="text-cyan-400" />}
+              <h3 className="text-xs font-mono font-bold tracking-widest text-cyan-200 uppercase">{title}</h3>
+            </div>
+            <div className="p-4 relative z-10 h-full flex flex-col">
+              {children}
+            </div>
+            <div className="absolute inset-0 z-0 opacity-5 pointer-events-none" 
+                 style={{ backgroundImage: 'linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+            </div>
+          </div>
+        );
+
+        const CircularGauge = ({ value, max = 100, label, unit, color = "stroke-cyan-500" }) => {
+          const radius = 36;
+          const circumference = 2 * Math.PI * radius;
+          const strokeDashoffset = circumference - (value / max) * circumference;
+
+          return (
+            <div className="flex flex-col items-center justify-center relative">
+              <svg className="transform -rotate-90 w-24 h-24">
+                <circle className="text-slate-800" strokeWidth="6" stroke="currentColor" fill="transparent" r={radius} cx="48" cy="48" />
+                <circle className={`${color} transition-all duration-1000 ease-out`} strokeWidth="6" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" stroke="currentColor" fill="transparent" r={radius} cx="48" cy="48" style={{ filter: 'drop-shadow(0 0 4px currentColor)' }} />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-bold text-white font-mono">{value}</span>
+                <span className="text-[10px] text-slate-400 font-mono">{unit}</span>
+              </div>
+              <span className="mt-2 text-xs font-mono text-cyan-200 tracking-wider">{label}</span>
+            </div>
+          );
+        };
+
+        const Sparkline = ({ data, color = "#22d3ee", height = 60 }) => {
+          if (!data || data.length === 0) return null;
+          const max = Math.max(...data, 100); 
+          const min = 0;
+          const width = 100; 
+          const points = data.map((val, i) => {
+            const x = (i / (data.length - 1)) * width;
+            const y = height - ((val - min) / (max - min)) * height;
+            return `${x},${y}`;
+          }).join(' ');
+
+          return (
+            <div className="w-full h-full overflow-hidden relative">
+              <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                <defs>
+                  <linearGradient id={`gradient-${color}`} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity="0.5" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d={`M0,${height} ${points} L${width},${height}`} fill={`url(#gradient-${color})`} stroke="none" className="opacity-30" />
+                <polyline fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" points={points} strokeLinecap="round" strokeLinejoin="round" style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
+              </svg>
+            </div>
+          );
+        };
+
+        const WeatherVisuals = ({ condition, className = "" }) => (
+            <div className={`relative w-full h-full pointer-events-none overflow-hidden rounded-full opacity-90 ${className}`}>
+              {condition === 'rainy' && (
+                <div className="w-full h-full relative">
+                  <Cloud className="absolute top-4 left-1/2 -translate-x-1/2 text-slate-400 animate-pulse" size={56} />
+                  <div className="absolute inset-0 flex justify-center pt-20 space-x-3">
+                     <div className="w-0.5 h-6 bg-blue-400/60 animate-[bounce_1s_infinite] delay-0"></div>
+                     <div className="w-0.5 h-6 bg-blue-400/60 animate-[bounce_1.2s_infinite] delay-100"></div>
+                     <div className="w-0.5 h-6 bg-blue-400/60 animate-[bounce_0.8s_infinite] delay-200"></div>
+                  </div>
+                </div>
+              )}
+              {condition === 'sunny' && (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <Sun className="text-yellow-400 animate-[spin_12s_linear_infinite]" size={80} />
+                  <div className="absolute inset-0 bg-yellow-400/20 blur-2xl rounded-full animate-pulse"></div>
+                </div>
+              )}
+              {condition === 'cloudy' && (
+                 <div className="relative w-full h-full">
+                   <Cloud className="absolute top-8 left-4 text-slate-300 opacity-80 animate-[ping_5s_infinite]" size={48} />
+                   <Cloud className="absolute top-4 right-6 text-slate-400 opacity-60" size={64} />
+                 </div>
+              )}
+              {(condition === 'partly' || !condition) && (
+                <div className="relative w-full h-full">
+                   <Sun className="absolute top-4 right-4 text-yellow-500/80 animate-[pulse_4s_infinite]" size={48} />
+                   <Cloud className="absolute top-10 left-6 text-slate-300 opacity-90" size={56} />
+                </div>
+              )}
+            </div>
+        );
+
+        const AddAppointmentModal = ({ isOpen, onClose, onSave, selectedDate }) => {
+          const [desc, setDesc] = useState("");
+          const [time, setTime] = useState("12:00");
+          const [reminder, setReminder] = useState(false);
+
+          if (!isOpen) return null;
+
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+              <div className="w-full max-w-md bg-slate-900 border border-emerald-500/30 p-6 rounded-lg shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                <h3 className="text-emerald-400 font-mono text-lg mb-4 flex items-center gap-2"><Plus size={18} /> NEW APPOINTMENT</h3>
+                <div className="space-y-4">
+                  <div><label className="block text-xs font-mono text-slate-500 mb-1">DATE</label><div className="text-white font-mono">{selectedDate?.toDateString()}</div></div>
+                  <div><label className="block text-xs font-mono text-slate-500 mb-1">DESCRIPTION</label><input type="text" value={desc} onChange={(e) => setDesc(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono focus:border-emerald-500 outline-none" placeholder="Details..." autoFocus /></div>
+                  <div><label className="block text-xs font-mono text-slate-500 mb-1">TIME</label><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono focus:border-emerald-500 outline-none" /></div>
+                  <div className="flex items-center gap-2 pt-2">
+                    <button onClick={() => setReminder(!reminder)} className={`flex items-center gap-2 px-3 py-2 rounded border text-xs font-mono transition-all ${reminder ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400' : 'border-slate-700 text-slate-500'}`}>
+                      <Bell size={14} /> {reminder ? "REMINDER ACTIVE" : "ADD REMINDER"}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 mt-8">
+                  <button onClick={onClose} className="px-4 py-2 rounded hover:bg-white/10 text-slate-400 text-xs font-mono">CANCEL</button>
+                  <button onClick={() => { onSave({ desc, time, reminder }); setDesc(""); onClose(); }} className="px-6 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono tracking-wider shadow-lg shadow-emerald-900/50">CONFIRM</button>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        // --- NEW SAVE NOTE MODAL ---
+        const SaveNoteModal = ({ isOpen, onClose, onSave }) => {
+            const [filename, setFilename] = useState("");
+            
+            if (!isOpen) return null;
+
+            const handleConfirm = () => {
+                if (!filename.endsWith('.txt')) {
+                    alert("Filename must end with .txt");
+                    return;
+                }
+                onSave(filename);
+                setFilename("");
+                onClose();
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="w-full max-w-sm bg-slate-900 border border-emerald-500/30 p-6 rounded-lg shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                        <h3 className="text-emerald-400 font-mono text-lg mb-4 flex items-center gap-2"><Save size={18} /> SAVE LOG ENTRY</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-mono text-slate-500 mb-1">FILENAME (.txt)</label>
+                                <input 
+                                    type="text" 
+                                    value={filename}
+                                    onChange={(e) => setFilename(e.target.value)}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white font-mono focus:border-emerald-500 outline-none"
+                                    placeholder="mission_report_01.txt"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-8">
+                            <button onClick={onClose} className="px-4 py-2 rounded hover:bg-white/10 text-slate-400 text-xs font-mono">CANCEL</button>
+                            <button onClick={handleConfirm} className="px-6 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold font-mono tracking-wider shadow-lg shadow-emerald-900/50">SAVE FILE</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- LANDING PAGE COMPONENTS ---
+        const LandingPage = ({ userProfile, onSaveNote }) => {
+            const [greeting, setGreeting] = useState("");
+            const [tasks] = useState(["Review system logs from nightly build", "Authorize new semantic core update", "Meeting with sector 7 leads"]);
+            const [logEntry, setLogEntry] = useState("");
+            const [lastSaved, setLastSaved] = useState(null);
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [selectedDate, setSelectedDate] = useState(new Date());
+            const [appointments, setAppointments] = useState({ [new Date().toDateString()]: [{ id: 1, title: "System Diagnostics", time: "14:00", reminder: true }] });
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [isSaveNoteOpen, setIsSaveNoteOpen] = useState(false);
+            
+            // WEATHER STATE
+            const [forecast, setForecast] = useState([]);
+            const [currentWeather, setCurrentWeather] = useState("cloudy");
+            const [currentTemp, setCurrentTemp] = useState(0);
+            const [locationName, setLocationName] = useState("Detecting...");
+
+            useEffect(() => { 
+                setGreeting(getGreeting()); 
+                const savedLog = localStorage.getItem('captainsLog'); 
+                if (savedLog) setLogEntry(savedLog); 
+                fetchWeather();
+            }, []);
+
+            const fetchWeather = () => {
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => { getWeatherData(position.coords.latitude, position.coords.longitude); },
+                        (error) => { console.warn("Geo denied"); getWeatherData(59.3293, 18.0686, "Stockholm"); }
+                    );
+                } else {
+                    getWeatherData(59.3293, 18.0686, "Stockholm");
+                }
+            };
+
+            const getWeatherData = async (lat, lon, fallbackName) => {
+                try {
+                    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,weather_code,is_day&timezone=auto&forecast_days=1`);
+                    const weatherData = await weatherRes.json();
+                    const current = weatherData.current;
+                    const hourly = weatherData.hourly;
+
+                    setCurrentTemp(Math.round(current.temperature_2m));
+                    setCurrentWeather(mapWeatherCode(current.weather_code));
+
+                    const nextHours = [];
+                    const currentHourIndex = new Date().getHours();
+                    for(let i = 1; i <= 6; i++) {
+                        const idx = currentHourIndex + i; 
+                        if (idx < hourly.time.length) {
+                            nextHours.push({
+                                time: new Date(hourly.time[idx]).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                temp: Math.round(hourly.temperature_2m[idx]),
+                                condition: mapWeatherCode(hourly.weather_code[idx])
+                            });
+                        }
+                    }
+                    setForecast(nextHours);
+
+                    if (fallbackName) {
+                        setLocationName(fallbackName);
+                    } else {
+                        try {
+                            const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+                            const geoData = await geoRes.json();
+                            setLocationName(geoData.city || geoData.locality || "Local Sector");
+                        } catch (e) { setLocationName("Unknown Sector"); }
+                    }
+                } catch (error) { setLocationName("Offline Mode"); }
+            };
+
+            const handleQuickSave = () => { 
+                localStorage.setItem('captainsLog', logEntry); 
+                setLastSaved(new Date().toLocaleTimeString()); 
+                setTimeout(() => setLastSaved(null), 3000); 
+            };
+
+            const handleSaveToFile = (filename) => {
+                onSaveNote(filename, logEntry);
+                handleQuickSave();
+            };
+
+            const handleAddAppointment = ({ desc, time, reminder }) => { const key = selectedDate.toDateString(); const newAppt = { id: Date.now(), title: desc, time, reminder }; setAppointments(prev => ({ ...prev, [key]: [...(prev[key] || []), newAppt].sort((a,b) => a.time.localeCompare(b.time)) })); };
+            const handleDeleteAppointment = (apptId) => { const key = selectedDate.toDateString(); setAppointments(prev => ({ ...prev, [key]: prev[key].filter(a => a.id !== apptId) })); };
+            const daysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            const getStartDay = (date) => { let day = new Date(date.getFullYear(), date.getMonth(), 1).getDay(); return day === 0 ? 6 : day - 1; };
+            const renderCalendarDays = () => { const days = []; const totalDays = daysInMonth(currentDate); const startDay = getStartDay(currentDate); for (let i = 0; i < startDay; i++) days.push(<div key={`empty-${i}`} className="h-10 w-10" />); for (let d = 1; d <= totalDays; d++) { const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d); const isSelected = date.toDateString() === selectedDate.toDateString(); const isToday = date.toDateString() === new Date().toDateString(); const hasEvents = appointments[date.toDateString()]?.length > 0; days.push( <button key={d} onClick={() => setSelectedDate(date)} className={`relative h-10 w-10 flex items-center justify-center rounded-sm text-sm font-mono transition-all ${isSelected ? 'bg-emerald-500 text-black font-bold' : 'hover:bg-white/5 text-slate-300'} ${isToday && !isSelected ? 'border border-emerald-500/50 text-emerald-400' : ''}`}> {d} {hasEvents && !isSelected && (<div className="absolute bottom-1 w-1 h-1 bg-emerald-400 rounded-full" />)} </button> ); } return days; };
+
+            return (
+                <div className="animate-in fade-in duration-500 space-y-8 pb-8">
+                    <CyberCard className="border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4 py-2">
+                         <div>
+                           <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 pb-2 drop-shadow-[0_0_10px_rgba(52,211,153,0.3)]">
+                             {greeting}<span className="text-slate-600 font-sans not-italic mx-2 text-4xl">//</span><span className="text-white">{userProfile.name.toUpperCase()}</span>
+                           </h1>
+                           <div className="mt-2 flex items-center gap-2 text-sm font-mono text-slate-400 pl-1">
+                              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                              <span className="tracking-wide">MISSION OBJECTIVES: <span className="text-emerald-300 font-bold">{tasks.join(' // ')}</span></span>
+                           </div>
+                         </div>
+                         <div className="flex flex-col items-end">
+                            <div className="px-3 py-1 rounded border border-emerald-900 bg-emerald-950/30 text-emerald-400 text-[10px] font-mono tracking-widest uppercase mb-1 shadow-[0_0_10px_rgba(16,185,129,0.1)]">System Optimal</div>
+                            <div className="text-[10px] text-slate-600 font-mono">ENCRYPTED CONNECTION</div>
+                         </div>
+                       </div>
+                    </CyberCard>
+                    <CyberCard title="CAPTAIN'S LOG // ENTRY" actionButton={ <div className="flex items-center gap-4"> {lastSaved && <span className="text-[10px] text-emerald-500 animate-fade-out font-mono">SAVED {lastSaved}</span>} <button onClick={() => setIsSaveNoteOpen(true)} className="flex items-center gap-2 text-[10px] font-mono bg-emerald-900/20 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded transition-all hover:shadow-[0_0_15px_rgba(16,185,129,0.3)]"><Save size={12} /> SAVE NOTE</button> </div> }> <textarea value={logEntry} onChange={(e) => setLogEntry(e.target.value)} placeholder="> Enter log entry data here..." className="w-full h-32 bg-transparent border-none outline-none resize-none font-mono text-sm text-slate-300 placeholder:text-slate-700 leading-relaxed" spellCheck="false" /> </CyberCard>
+                    <CyberCard title="ATMOSPHERIC CONDITIONS" className="min-h-[300px]">
+                       <div className="flex flex-col h-full gap-8 px-2 py-2">
+                          <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                             <div>
+                                <div className="text-7xl font-black text-white tracking-tighter drop-shadow-lg">{currentTemp}°</div>
+                                <div className="text-emerald-400 font-mono text-sm tracking-[0.3em] uppercase mt-2 font-bold flex items-center gap-2">{currentWeather}<span className="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span></div>
+                                <div className="text-slate-600 font-mono text-[10px] mt-1 flex items-center gap-1 uppercase tracking-wider"><MapPin size={10} /> Sector: {locationName}</div>
+                             </div>
+                             <div className="w-32 h-32 md:w-40 md:h-40 relative mr-4"><WeatherVisuals condition={currentWeather} className="drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]" /></div>
+                          </div>
+                          <div>
+                             <div className="text-[10px] font-mono text-slate-500 mb-4 uppercase tracking-widest flex items-center gap-2"><Clock size={10} /> Temporal Forecast (Next 6h)</div>
+                             <div className="flex justify-between items-center overflow-x-auto pb-2 gap-4 custom-scrollbar">
+                               {forecast.map((item, idx) => ( <div key={idx} className="flex flex-col items-center min-w-[70px] space-y-3 group cursor-default p-2 rounded hover:bg-white/5 transition-colors"> <span className="text-[10px] font-mono text-slate-500">{item.time}</span> <div className="p-2.5 rounded-full bg-slate-800/50 group-hover:bg-emerald-500/10 group-hover:scale-110 transition-all duration-300 border border-transparent group-hover:border-emerald-500/20"> {item.condition === 'sunny' && <Sun size={20} className="text-yellow-400" />} {item.condition === 'cloudy' && <Cloud size={20} className="text-slate-400" />} {item.condition === 'rainy' && <CloudRain size={20} className="text-blue-400" />} {item.condition === 'partly' && <Cloud size={20} className="text-slate-300" />} </div> <span className="text-sm font-bold font-mono text-white">{item.temp}°</span> </div> ))}
+                             </div>
+                          </div>
+                       </div>
+                    </CyberCard>
+                    <CyberCard title="SCHEDULE MATRIX" className="min-h-[340px]" actionButton={ <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-300 font-mono font-bold tracking-wider px-3 py-1 rounded border border-emerald-500/30 hover:bg-emerald-500/10 transition-colors"><Plus size={12} /> ADD EVENT</button> }> <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full"> <div className="p-2"> <div className="flex justify-between items-center mb-6 px-2"> <button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()-1); setCurrentDate(d); }} className="text-slate-500 hover:text-emerald-400 transition-colors"><ChevronLeft size={20} /></button> <span className="text-base font-mono font-bold text-white uppercase tracking-[0.2em]">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span> <button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()+1); setCurrentDate(d); }} className="text-slate-500 hover:text-emerald-400 transition-colors"><ChevronRight size={20} /></button> </div> <div className="grid grid-cols-7 gap-2 text-center mb-2">{['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => <span key={d} className="text-[10px] font-mono text-slate-600 font-bold">{d}</span>)}</div> <div className="grid grid-cols-7 gap-2">{renderCalendarDays()}</div> </div> <div className="border-l border-white/5 pl-0 md:pl-8 flex flex-col h-full py-2"> <h4 className="text-xs font-mono text-emerald-500 mb-6 flex items-center gap-2 uppercase tracking-wider bg-emerald-950/20 py-2 px-3 rounded w-fit border border-emerald-900/50"><CalendarIcon size={12} /> {selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h4> <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar"> {appointments[selectedDate.toDateString()]?.length > 0 ? ( appointments[selectedDate.toDateString()].map((appt) => ( <div key={appt.id} className="bg-gradient-to-r from-slate-800/40 to-transparent border-l-2 border-emerald-500 p-4 rounded-r-sm hover:from-slate-800/60 transition-colors group flex justify-between items-start"> <div> <div className="flex items-center gap-2 mb-2"><Clock size={12} className="text-emerald-400" /><span className="text-xs font-mono font-bold text-white tracking-widest">{appt.time}</span></div> <p className="text-sm text-slate-200 font-medium">{appt.title}</p> {appt.reminder && (<div className="flex items-center gap-1 mt-2 text-[10px] text-slate-500"><Bell size={10} /> Email reminder set</div>)} </div> <button onClick={() => handleDeleteAppointment(appt.id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 transition-all p-2 hover:bg-white/5 rounded"><Trash2 size={14} /></button> </div> )) ) : ( <div className="h-full flex flex-col items-center justify-center text-slate-700 space-y-3 opacity-60"><div className="p-4 rounded-full bg-slate-800/30 border border-slate-800"><CalendarIcon size={24} strokeWidth={1.5} /></div><span className="text-xs font-mono uppercase tracking-widest">No Data Found</span></div> )} </div> </div> </div> </CyberCard>
+                    <AddAppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} selectedDate={selectedDate} onSave={handleAddAppointment} />
+                    <SaveNoteModal isOpen={isSaveNoteOpen} onClose={() => setIsSaveNoteOpen(false)} onSave={handleSaveToFile} />
+                </div>
+            );
+        };
+
+        // --- TELEMETRY VIEW ---
+        const TelemetryView = () => { 
+            const [cpuLoad, setCpuLoad] = useState(0); 
+            const [cpuTemp, setCpuTemp] = useState(0); 
+            const [ramUsed, setRamUsed] = useState(0); 
+            const [ramTotal, setRamTotal] = useState(32); 
+            const [diskUsed, setDiskUsed] = useState(0); 
+            const [diskTotal, setDiskTotal] = useState(1000); 
+            const [uptime, setUptime] = useState({ days: 0, hours: 0, minutes: 0 }); 
+            const [cpuHistory, setCpuHistory] = useState(Array(30).fill(0)); 
+            const [netDownHistory, setNetDownHistory] = useState(Array(30).fill(0)); 
+            const [netUpHistory, setNetUpHistory] = useState(Array(30).fill(0)); 
+            const lastNet = useRef({ recv: 0, sent: 0, time: Date.now() }); 
+
+            const fetchData = async () => { 
+                const res = await authFetch('/system/stats'); 
+                if (!res || !res.ok) return; 
+                
+                const data = await res.json(); 
+                setCpuLoad(Math.round(data.cpu_pct)); 
+                setCpuTemp(Math.round(data.temp || 0)); 
+                setRamUsed(data.ram_used / (1024**3)); 
+                setRamTotal(data.ram_total / (1024**3)); 
+                setDiskUsed(Math.round(data.disk_used / (1024**3))); 
+                setDiskTotal(Math.round(data.disk_total / (1024**3))); 
+                
+                const d = Math.floor(data.uptime / (3600 * 24)); 
+                const h = Math.floor((data.uptime % (3600 * 24)) / 3600); 
+                const m = Math.floor((data.uptime % 3600) / 60); 
+                setUptime({ days: d, hours: h, minutes: m }); 
+                
+                setCpuHistory(prev => [...prev.slice(1), data.cpu_pct]); 
+                
+                const now = Date.now(); 
+                const timeDiff = (now - lastNet.current.time) / 1000; 
+                if (timeDiff > 0 && lastNet.current.recv > 0) { 
+                    const recvDiff = data.net_recv - lastNet.current.recv; 
+                    const sentDiff = data.net_sent - lastNet.current.sent; 
+                    const rxMbps = (recvDiff * 8) / (1000 * 1000) / timeDiff; 
+                    const txMbps = (sentDiff * 8) / (1000 * 1000) / timeDiff; 
+                    setNetDownHistory(prev => [...prev.slice(1), rxMbps]); 
+                    setNetUpHistory(prev => [...prev.slice(1), txMbps]); 
+                } 
+                lastNet.current = { recv: data.net_recv, sent: data.net_sent, time: now }; 
+            }; 
+
+            useEffect(() => { 
+                fetchData(); 
+                const interval = setInterval(fetchData, 2000); 
+                return () => clearInterval(interval); 
+            }, []); 
+            
+            const getLoadColor = (val) => { 
+                if (val > 80) return "stroke-red-500 text-red-500"; 
+                if (val > 50) return "stroke-yellow-400 text-yellow-400"; 
+                return "stroke-cyan-400 text-cyan-400"; 
+            }; 
+            
+            return ( <div className="animate-in fade-in duration-500 space-y-6"> <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-white/10 pb-6"> <div> <div className="flex items-center gap-2 mb-2"> <Terminal size={20} className="text-cyan-400 animate-pulse" /> <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-white uppercase italic"> Aurora<span className="text-cyan-400">Radiant</span> </h1> </div> <p className="text-xs font-mono text-cyan-500/70 tracking-[0.2em] uppercase"> System Telemetry // v.2.4.0 </p> </div> <div className="flex gap-6 mt-4 md:mt-0 font-mono text-sm"> <div className="text-right"> <span className="block text-slate-500 text-[10px] uppercase tracking-wider">Status</span> <span className="flex items-center gap-2 text-emerald-400 font-bold"> <span className="relative flex h-2 w-2"> <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span> <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span> </span> ONLINE </span> </div> <div className="text-right"> <span className="block text-slate-500 text-[10px] uppercase tracking-wider">Uptime</span> <span className="text-white font-bold"> {uptime.days}d {uptime.hours}h {uptime.minutes}m </span> </div> </div> </div> <div className="grid grid-cols-2 md:grid-cols-4 gap-4"> <GlowCard title="CPU LOAD" icon={Cpu} className="flex justify-center py-6"> <CircularGauge value={cpuLoad} max={100} unit="%" label="AMD RYZEN 9" color={getLoadColor(cpuLoad)} /> </GlowCard> <GlowCard title="RAM USAGE" icon={MemoryStick} className="flex justify-center py-6"> <CircularGauge value={Math.round((ramUsed / ramTotal) * 100) || 0} max={100} unit="%" label={`${ramUsed.toFixed(1)} / ${ramTotal.toFixed(0)} GB`} color="stroke-fuchsia-500 text-fuchsia-500" /> </GlowCard> <GlowCard title="CPU TEMP" icon={Zap} className="flex justify-center py-6"> <CircularGauge value={cpuTemp} max={100} unit="°C" label="THERMAL" color={cpuTemp > 80 ? "stroke-red-500" : "stroke-emerald-400 text-emerald-400"} /> </GlowCard> <GlowCard title="DISK NVME" icon={Disc} className="flex justify-center py-6"> <CircularGauge value={Math.round((diskUsed / diskTotal) * 100) || 0} max={100} unit="%" label={`${diskUsed}GB USED`} color="stroke-indigo-400 text-indigo-400" /> </GlowCard> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <GlowCard title="CPU HISTORY (CORE 0-16)" icon={Activity} className="col-span-1"> <div className="h-full flex flex-col justify-between min-h-[160px]"> <div className="flex justify-between items-end mb-4"> <div> <div className="text-2xl font-bold text-white font-mono">{cpuLoad}%</div> <div className="text-xs text-slate-500">Current Load</div> </div> <Cpu className="text-slate-700 opacity-20" size={48} /> </div> <div className="h-16 w-full relative"> <Sparkline data={cpuHistory} color="#22d3ee" height={60} /> </div> <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-2"> <span>-60s</span><span>NOW</span> </div> </div> </GlowCard> <GlowCard title="NETWORK TRAFFIC (ETH0)" icon={Wifi} className="col-span-1 md:col-span-2"> <div className="grid grid-cols-2 gap-8 h-full"> <div className="relative"> <div className="flex justify-between items-center mb-2"> <span className="text-xs font-mono text-emerald-400">INBOUND (RX)</span> <span className="text-xl font-bold text-white font-mono">{netDownHistory[netDownHistory.length -1].toFixed(1)} Mbps</span> </div> <div className="h-24 border-b border-l border-slate-700/50 bg-emerald-900/5 rounded-bl-lg w-full relative"> <Sparkline data={netDownHistory} color="#34d399" height={80} /> </div> </div> <div className="relative"> <div className="flex justify-between items-center mb-2"> <span className="text-xs font-mono text-fuchsia-400">OUTBOUND (TX)</span> <span className="text-xl font-bold text-white font-mono">{netUpHistory[netUpHistory.length -1].toFixed(1)} Mbps</span> </div> <div className="h-24 border-b border-l border-slate-700/50 bg-fuchsia-900/5 rounded-bl-lg w-full relative"> <Sparkline data={netUpHistory} color="#e879f9" height={80} /> </div> </div> </div> </GlowCard> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <GlowCard title="ACTIVE PORTS & PROCESSES" icon={Server} className="md:col-span-2"> <div className="overflow-x-auto"> <table className="w-full text-left border-collapse"> <thead> <tr className="text-[10px] text-slate-500 font-mono uppercase tracking-wider border-b border-white/10"> <th className="pb-2">PID</th><th className="pb-2">Process</th><th className="pb-2">Port</th><th className="pb-2">Proto</th><th className="pb-2 text-right">Status</th> </tr> </thead> <tbody className="font-mono text-sm"> {[ { pid: 1420, proc: 'docker-proxy', port: 8080, proto: 'TCP', status: 'LISTEN' }, { pid: 882, proc: 'sshd', port: 22, proto: 'TCP', status: 'LISTEN' }, { pid: 3306, proc: 'mysqld', port: 3306, proto: 'TCP', status: 'LISTEN' }, { pid: 1194, proc: 'openvpn', port: 1194, proto: 'UDP', status: 'ACTIVE' }, ].map((row, i) => ( <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors group"> <td className="py-3 text-slate-400">{row.pid}</td> <td className="py-3 text-cyan-300 font-bold flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-cyan-500 group-hover:animate-pulse"></div>{row.proc}</td> <td className="py-3 text-fuchsia-300">{row.port}</td> <td className="py-3 text-slate-500">{row.proto}</td> <td className="py-3 text-right"><span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{row.status}</span></td> </tr> ))} </tbody> </table> </div> </GlowCard> <div className="space-y-4"> <GlowCard title="SYSTEM HEALTH" icon={ShieldCheck}> <ul className="space-y-3"> <li className="flex justify-between items-center text-sm font-mono"><span className="text-slate-400">Kernel</span><span className="text-white">Linux Generic</span></li> <li className="flex justify-between items-center text-sm font-mono"><span className="text-slate-400">Distro</span><span className="text-white">Ubuntu 24.04 LTS</span></li> <li className="flex justify-between items-center text-sm font-mono"><span className="text-slate-400">Status</span><span className="text-emerald-400">Healthy</span></li> </ul> </GlowCard> <GlowCard title="DISK STRUCTURE" icon={HardDrive}> <div className="space-y-4 mt-2"> <div> <div className="flex justify-between text-xs font-mono mb-1"><span className="text-white">/ (root)</span><span className="text-cyan-400">{Math.round((diskUsed/diskTotal)*100) || 0}%</span></div> <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" style={{width: `${(diskUsed/diskTotal)*100}%`}}></div></div> </div> </div> </GlowCard> </div> </div> </div> ); };
+
+        const TerminalLine = ({ text }) => {
+          let colorClass = "text-slate-400";
+          if (text.includes("INFO")) colorClass = "text-cyan-300";
+          if (text.includes("WARN")) colorClass = "text-yellow-400";
+          if (text.includes("ERROR")) colorClass = "text-red-400";
+          if (text.includes("joined the game")) colorClass = "text-emerald-400";
+
+          const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+
+          return (
+            <div className="font-mono text-xs md:text-sm py-0.5 hover:bg-white/5 px-1 rounded transition-colors break-all">
+              <span className="text-slate-600 mr-2">[{timestamp}]</span>
+              <span className={colorClass}>{text}</span>
+            </div>
+          );
+        };
+
+        const MinecraftView = ({ selectedServer }) => { const [status, setStatus] = useState('ONLINE'); const [players, setPlayers] = useState(0); const [playerList, setPlayerList] = useState([]); const [maxPlayers, setMaxPlayers] = useState(20); const [cpuLoad, setCpuLoad] = useState(0); const [ramUsage, setRamUsage] = useState(0); const [logs, setLogs] = useState(MOCK_LOGS); const [uptimeStr, setUptimeStr] = useState("0d 0h 0m"); const terminalRef = useRef(null); useEffect(() => { if (terminalRef.current) { terminalRef.current.scrollTop = terminalRef.current.scrollHeight; } }, [logs]); useEffect(() => { const updateData = async () => { try { const mcRes = await authFetch('/minecraft/status'); if (mcRes && mcRes.ok) { const mcData = await mcRes.json(); setStatus(mcData.running ? 'ONLINE' : 'OFFLINE'); setPlayers(mcData.online_players || 0); setMaxPlayers(mcData.max_players || 20); setPlayerList(mcData.player_sample || []); } } catch(e) {} try { const sysRes = await authFetch('/system/stats'); if (sysRes && sysRes.ok) { const sysData = await sysRes.json(); setCpuLoad(sysData.cpu_pct || 0); const ramGB = (sysData.ram_used / (1024 * 1024 * 1024)); setRamUsage(ramGB); if (sysData.uptime) { const d = Math.floor(sysData.uptime / (3600 * 24)); const h = Math.floor((sysData.uptime % (3600 * 24)) / 3600); const m = Math.floor((sysData.uptime % 3600) / 60); setUptimeStr(`${d}d ${h}h ${m}m`); } } } catch(e) {} }; updateData(); const interval = setInterval(updateData, 2000); return () => clearInterval(interval); }, []); const handleStart = () => { if (status !== 'OFFLINE') return; setStatus('STARTING'); setLogs(prev => [...prev, "[System]: Initializing startup sequence..."]); authFetch('/minecraft/start', { method: 'POST' }); }; const handleStop = () => { if (status === 'OFFLINE') return; setStatus('STOPPING'); setLogs(prev => [...prev, "[System]: Stopping server..."]); authFetch('/minecraft/stop', { method: 'POST' }); }; const getStatusColor = () => { switch(status) { case 'ONLINE': return 'text-emerald-400 border-emerald-500/50'; case 'OFFLINE': return 'text-red-500 border-red-500/50'; case 'STARTING': return 'text-yellow-400 border-yellow-500/50'; case 'STOPPING': return 'text-orange-500 border-orange-500/50'; default: return 'text-slate-400 border-slate-500/50'; } }; return ( <div className="h-[calc(100vh-140px)] animate-in fade-in duration-500 space-y-6 flex flex-col"> <header className="flex flex-col md:flex-row justify-between items-end border-b border-white/10 pb-6 shrink-0"> <div> <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white uppercase italic flex items-center gap-3"> Aurora<span className="text-cyan-400">Mimir</span> <span className="text-base not-italic font-mono text-slate-600 bg-slate-900 px-2 py-1 rounded border border-slate-800">v.1.20.4</span> </h1> <p className="text-xs font-mono text-cyan-500/70 tracking-[0.2em] mt-2 uppercase"> Managed Instance // <span className="text-white font-bold">{selectedServer.name}</span> // Dockerized </p> </div> <div className="flex items-center gap-6 font-mono text-sm mt-4 md:mt-0"> <div className="text-right"> <div className="text-[10px] text-slate-500 uppercase tracking-wider">Status</div> <div className={`font-bold flex items-center gap-2 ${getStatusColor().split(' ')[0]}`}> <div className={`w-2 h-2 rounded-full ${status === 'ONLINE' ? 'animate-pulse bg-emerald-400' : 'bg-current'}`}></div> {status} </div> </div> <div className="text-right border-l border-white/10 pl-6"> <div className="text-[10px] text-slate-500 uppercase tracking-wider">Uptime</div> <div className="text-white font-bold">{uptimeStr}</div> </div> </div> </header> <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0"> <div className="lg:col-span-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar"> <CyberCard title="Operations" icon={Settings} className="bg-slate-900/50 shrink-0"> <div className="grid gap-3"> <button onClick={handleStart} disabled={status !== 'OFFLINE'} className={`relative group overflow-hidden p-4 rounded flex items-center justify-center gap-3 font-mono font-bold border transition-all ${status === 'OFFLINE' ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500 hover:text-black hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]' : 'bg-slate-800/50 border-slate-800 text-slate-600 cursor-not-allowed'}`}> <Play size={18} fill="currentColor" /> START SERVER </button> <button onClick={() => { handleStop(); handleStart(); }} disabled={status === 'OFFLINE'} className={`relative group overflow-hidden p-4 rounded flex items-center justify-center gap-3 font-mono font-bold border transition-all ${status === 'ONLINE' ? 'bg-cyan-900/20 border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-black hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]' : 'bg-slate-800/50 border-slate-800 text-slate-600 cursor-not-allowed'}`}> <RotateCcw size={18} /> RESTART </button> <button onClick={handleStop} disabled={status === 'OFFLINE'} className={`relative group overflow-hidden p-4 rounded flex items-center justify-center gap-3 font-mono font-bold border transition-all ${status !== 'OFFLINE' ? 'bg-red-900/20 border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-slate-800/50 border-slate-800 text-slate-600 cursor-not-allowed'}`}> <Square size={18} fill="currentColor" /> STOP </button> </div> </CyberCard> <CyberCard title="Active Players" icon={Users} className="shrink-0"> <div className="flex justify-between items-end mb-2"> <span className="text-4xl font-black text-white tracking-tighter">{players}</span> <span className="text-sm font-mono text-slate-500 mb-1">/ {maxPlayers}</span> </div> <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden"> <div className="h-full bg-cyan-500 transition-all duration-500" style={{ width: `${(players/maxPlayers)*100}%` }} /> </div> <div className="mt-4 space-y-2"> {playerList.length > 0 ? ( playerList.map((p, i) => (<div key={i} className="flex items-center gap-2 text-xs font-mono text-slate-400"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>{p.name || p}</div>)) ) : ( <div className="text-xs font-mono text-slate-600 italic">No players online</div> )} </div> </CyberCard> <div className="grid grid-cols-2 gap-4 shrink-0"> <CyberCard title="CPU LOAD" icon={Activity} className="items-center justify-center py-4"> <div className={`text-2xl font-black font-mono ${cpuLoad < 80 ? 'text-emerald-400' : 'text-red-400'}`}>{cpuLoad.toFixed(1)}%</div> <div className="text-[10px] text-slate-500 mt-1">SYSTEM LOAD</div> </CyberCard> <CyberCard title="RAM USAGE" icon={HardDrive} className="items-center justify-center py-4"> <div className="text-2xl font-black text-fuchsia-400 font-mono">{ramUsage.toFixed(1)}<span className="text-sm text-slate-500 ml-1">GB</span></div> <div className="text-[10px] text-slate-500 mt-1">SYSTEM USED</div> </CyberCard> </div> </div> <div className="lg:col-span-3 flex flex-col min-h-0"> <CyberCard title="Live Console Output" icon={Terminal} className="h-full flex-1" statusColor="border-emerald-500/30"> <div className="flex flex-col h-full"> <div ref={terminalRef} className="flex-1 overflow-y-auto font-mono text-sm space-y-1 pr-2 custom-scrollbar bg-black/40 p-2 rounded border border-white/5 shadow-inner"> {logs.map((log, i) => <TerminalLine key={i} text={log} />)} {status === 'OFFLINE' && <div className="text-red-500 font-mono text-xs mt-4 animate-pulse">&gt; CONNECTION LOST. WAITING FOR SERVER...</div>} </div> <div className="mt-4 flex gap-2 relative shrink-0"> <span className="absolute left-3 top-2.5 text-cyan-500 font-mono font-bold">&gt;</span> <input type="text" placeholder="Execute command..." className="w-full bg-slate-800/50 border border-slate-700 rounded py-2 pl-8 pr-4 text-white font-mono text-sm focus:border-cyan-500 focus:bg-slate-800 outline-none transition-colors" disabled={status === 'OFFLINE'} /> <button className="bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 px-4 rounded border border-cyan-500/30 font-mono text-xs font-bold uppercase tracking-wider transition-colors">Send</button> </div> </div> </CyberCard> </div> </div> </div> ); };
+
+        const BorealisView = ({ userProfile }) => { const [messages, setMessages] = useState([ { id: 1, sender: 'ai', text: "Hello Commander. I am Borealis, your neural interface. Systems are operational. How may I assist you today?" } ]); const [input, setInput] = useState(""); const [isThinking, setIsThinking] = useState(false); const [status, setStatus] = useState("ONLINE"); const scrollRef = useRef(null); useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isThinking]); const handleSend = async (e) => { e.preventDefault(); if (!input.trim()) return; const userMsg = { id: Date.now(), sender: 'user', text: input }; setMessages(prev => [...prev, userMsg]); setInput(""); setIsThinking(true); try { const res = await authFetch('/borealis/chat', { method: 'POST', body: JSON.stringify({ message: userMsg.text }) }); let aiResponse = "I'm sorry, my neural link is currently unstable."; if (res && res.ok) { const data = await res.json(); aiResponse = data.response; setStatus("ONLINE"); } else { await new Promise(r => setTimeout(r, 2000)); aiResponse = `I am currently running in simulation mode. I received: "${userMsg.text}"`; } setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: aiResponse }]); } catch (error) { setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: "Error: Neural connection failure." }]); setStatus("OFFLINE"); } finally { setIsThinking(false); } }; return ( <div className="h-[calc(100vh-140px)] animate-in fade-in duration-500 flex flex-col gap-6 max-w-5xl mx-auto"> <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-4 rounded-sm"> <div className="flex items-center gap-4"> <div className="p-2 bg-cyan-950/50 rounded border border-cyan-500/30"> <Brain size={24} className="text-cyan-400 animate-pulse-glow" /> </div> <div> <h2 className="text-xl font-black italic tracking-tighter text-white">BOREALIS</h2> <p className="text-[10px] font-mono text-slate-500 tracking-widest uppercase">Neural Interface v3.1</p> </div> </div> <div className="flex items-center gap-2 px-3 py-1 rounded bg-black/40 border border-white/5"> <div className={`w-2 h-2 rounded-full ${status === 'ONLINE' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div> <span className={`text-xs font-mono font-bold ${status === 'ONLINE' ? 'text-emerald-500' : 'text-red-500'}`}>{status}</span> </div> </div> <CyberCard className="flex-1 min-h-0 flex flex-col"> <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar"> {messages.map((msg) => ( <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}> <div className={`max-w-[80%] lg:max-w-[70%] flex gap-3 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}> <div className={`w-8 h-8 shrink-0 rounded flex items-center justify-center border overflow-hidden ${msg.sender === 'user' ? 'bg-slate-800 border-slate-700' : 'bg-cyan-950/30 border-cyan-500/30'}`}> {msg.sender === 'user' ? (userProfile.avatar ? <img src={userProfile.avatar} alt="User" className="w-full h-full object-cover" /> : <User size={14} className="text-slate-400" />) : <Brain size={14} className="text-cyan-400" />} </div> <div className={`p-3 rounded text-sm font-mono leading-relaxed border ${msg.sender === 'user' ? 'bg-slate-800/50 border-slate-700 text-slate-300' : 'bg-cyan-950/10 border-cyan-500/20 text-cyan-100'}`}> <div className="text-[10px] opacity-50 mb-1 font-bold">{msg.sender === 'user' ? userProfile.name : 'BOREALIS'}</div> {msg.text} </div> </div> </div> ))} {isThinking && ( <div className="flex justify-start"> <div className="max-w-[80%] flex gap-3"> <div className="w-8 h-8 shrink-0 rounded flex items-center justify-center border bg-cyan-950/30 border-cyan-500/30"> <Brain size={14} className="text-cyan-400 animate-spin" style={{ animationDuration: '3s' }} /> </div> <div className="p-3 rounded text-xs font-mono border bg-cyan-950/5 border-cyan-500/10 text-cyan-500 flex items-center gap-2"> <span>Borealis is thinking</span> <span className="flex gap-1"> <span className="w-1 h-1 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span> <span className="w-1 h-1 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span> <span className="w-1 h-1 bg-cyan-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span> </span> </div> </div> </div> )} <div ref={scrollRef} /> </div> <div className="p-4 border-t border-white/5 bg-black/20 mt-auto shrink-0"> <form onSubmit={handleSend} className="flex gap-3"> <input value={input} onChange={e => setInput(e.target.value)} placeholder="Enter command or query..." className="flex-1 bg-slate-900/50 border border-slate-700 rounded p-3 text-sm text-white font-mono focus:border-cyan-500 focus:bg-slate-900 outline-none transition-colors placeholder:text-slate-600" disabled={isThinking} /> <button type="submit" disabled={isThinking || !input.trim()} className="bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 disabled:text-slate-600 text-white px-4 rounded flex items-center justify-center transition-colors" > <Send size={18} /> </button> </form> </div> </CyberCard> </div> ); };
+
+        const StorageView = () => <div className="text-slate-500 font-mono text-center mt-20">STORAGE MODULE LOCKED</div>;
+
+        // --- AURORA NOVA (STORAGE) ---
+        const AuroraNovaView = ({ files, setFiles }) => {
+            const [currentFolderId, setCurrentFolderId] = useState('root');
+            const [isUploading, setIsUploading] = useState(false);
+            const fileInputRef = useRef(null);
+
+            // Calculate Usage
+            const usage = useMemo(() => {
+                let stats = { image: 0, video: 0, code: 0, other: 0, total: 0 };
+                files.forEach(f => {
+                    if (f.type === 'folder') return;
+                    stats.total += f.size;
+                    if (f.type === 'image') stats.image += f.size;
+                    else if (f.type === 'video') stats.video += f.size;
+                    else if (f.type === 'code') stats.code += f.size;
+                    else stats.other += f.size;
+                });
+                return stats;
+            }, [files]);
+
+            const QUOTA_GB = 30;
+            const usedGB = usage.total / (1024 ** 3);
+            const percentUsed = (usedGB / QUOTA_GB) * 100;
+
+            const currentFolder = files.find(f => f.id === currentFolderId) || { id: 'root', name: 'root' };
+            const visibleFiles = files.filter(f => f.parent === currentFolderId);
+
+            const getFileIcon = (type) => {
+                switch (type) {
+                    case 'folder': return { icon: Folder, color: 'text-emerald-400', bg: 'bg-emerald-900/20' };
+                    case 'image': return { icon: ImageIcon, color: 'text-cyan-400', bg: 'bg-cyan-900/20' };
+                    case 'video': return { icon: Film, color: 'text-purple-400', bg: 'bg-purple-900/20' };
+                    case 'code': return { icon: FileCode, color: 'text-yellow-400', bg: 'bg-yellow-900/20' };
+                    case 'doc': return { icon: FileText, color: 'text-blue-400', bg: 'bg-blue-900/20' };
+                    case 'archive': return { icon: HardDrive, color: 'text-red-400', bg: 'bg-red-900/20' };
+                    default: return { icon: File, color: 'text-slate-300', bg: 'bg-slate-800' };
+                }
+            };
+
+            const formatBytes = (bytes, decimals = 2) => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const dm = decimals < 0 ? 0 : decimals;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+            };
+
+            const handleUpload = () => {
+                fileInputRef.current.click();
+            };
+
+            const handleDelete = (e, file) => {
+                e.stopPropagation(); 
+                if (file.type === 'folder') {
+                    const hasChildren = files.some(f => f.parent === file.id);
+                    if (hasChildren) {
+                        alert("Folder must be empty before deletion.");
+                        return;
+                    }
+                }
+                if (confirm(`Delete ${file.name}?`)) {
+                    setFiles(prev => prev.filter(f => f.id !== file.id));
+                }
+            };
+
+            const handleDownload = (e, file) => {
+                e.stopPropagation();
+                if(file.type === 'folder') return;
+                alert(`Downloading: ${file.name} (Simulated)`);
+                // In real app: window.location.href = `/api/storage/download?path=${file.path}`;
+            };
+
+            const onFileChange = (e) => {
+                if (e.target.files.length > 0) {
+                    setIsUploading(true);
+                    // Mock upload delay
+                    setTimeout(() => {
+                        const newFiles = Array.from(e.target.files).map(f => ({
+                            id: Date.now() + Math.random(),
+                            name: f.name,
+                            type: f.type.includes('image') ? 'image' : f.type.includes('video') ? 'video' : 'doc',
+                            size: f.size,
+                            parent: currentFolderId
+                        }));
+                        setFiles(prev => [...prev, ...newFiles]);
+                        setIsUploading(false);
+                    }, 1500);
+                }
+            };
+
+            const navigateUp = () => {
+                if (currentFolderId !== 'root') {
+                    const parent = files.find(f => f.id === currentFolder.parent);
+                    if (parent) setCurrentFolderId(parent.id);
+                    else setCurrentFolderId('root');
+                }
+            };
+
+            return (
+                <div className="h-[calc(100vh-140px)] animate-in fade-in duration-500 flex flex-col gap-6">
+                    
+                    {/* QUOTA HEADER */}
+                    <CyberCard className="shrink-0">
+                        <div className="flex flex-col gap-4 p-2">
+                            <div className="flex justify-between items-end">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-blue-900/30 rounded-lg border border-blue-500/30">
+                                        <Database size={24} className="text-blue-400" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-black tracking-wider text-white">AURORA NOVA</h2>
+                                        <p className="text-xs font-mono text-slate-400">USER STORAGE ENCLAVE</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-2xl font-mono font-bold text-white">
+                                        {usedGB.toFixed(2)} <span className="text-sm text-slate-500">GB</span> / {QUOTA_GB.toFixed(2)} <span className="text-sm text-slate-500">GB</span>
+                                    </div>
+                                    <div className="text-xs font-mono text-emerald-400">{percentUsed.toFixed(2)}% USED</div>
+                                </div>
+                            </div>
+
+                            {/* Stacked Progress Bar */}
+                            <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden flex border border-slate-700">
+                                <div style={{ width: `${(usage.image / usage.total) * percentUsed}%` }} className="h-full bg-cyan-500 shadow-[0_0_10px_cyan]" />
+                                <div style={{ width: `${(usage.video / usage.total) * percentUsed}%` }} className="h-full bg-purple-500 shadow-[0_0_10px_purple]" />
+                                <div style={{ width: `${(usage.code / usage.total) * percentUsed}%` }} className="h-full bg-yellow-500" />
+                                <div style={{ width: `${(usage.other / usage.total) * percentUsed}%` }} className="h-full bg-slate-500" />
+                            </div>
+                            
+                            {/* Legend */}
+                            <div className="flex gap-4 text-[10px] font-mono uppercase tracking-widest">
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-cyan-500"></div>Images</span>
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div>Video</span>
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-yellow-500"></div>Code</span>
+                                <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-slate-500"></div>Other</span>
+                            </div>
+                        </div>
+                    </CyberCard>
+
+                    {/* FILE EXPLORER */}
+                    <CyberCard className="flex-1 min-h-0 flex flex-col" title={`PATH: /${currentFolderId === 'root' ? '' : currentFolder.name}`} 
+                        actionButton={
+                            <div className="flex gap-2">
+                                <button onClick={() => { const name = prompt("Folder Name:"); if(name) setFiles(prev => [...prev, {id: Date.now(), name, type: 'folder', parent: currentFolderId}]) }} className="flex items-center gap-2 px-3 py-1.5 rounded border border-slate-700 hover:bg-slate-800 text-xs font-mono transition-colors">
+                                    <Plus size={14} /> NEW FOLDER
+                                </button>
+                                <button onClick={handleUpload} className="flex items-center gap-2 px-3 py-1.5 rounded bg-emerald-900/30 border border-emerald-500/50 text-emerald-400 hover:bg-emerald-900/50 text-xs font-mono font-bold transition-colors">
+                                    <Upload size={14} /> UPLOAD
+                                </button>
+                                <input type="file" multiple ref={fileInputRef} className="hidden" onChange={onFileChange} />
+                            </div>
+                        }
+                    >
+                        <div className="flex items-center gap-2 pb-4 border-b border-white/5 mb-2 text-sm text-slate-400">
+                            <button onClick={navigateUp} disabled={currentFolderId === 'root'} className="p-1 hover:bg-white/10 rounded disabled:opacity-30 transition-colors"><ChevronLeft /></button>
+                            <div className="flex-1 font-mono">
+                                <span className="text-slate-600">root</span>
+                                {currentFolderId !== 'root' && <span className="text-white"> / {currentFolder.name}</span>}
+                            </div>
+                            <div className="flex items-center gap-2 bg-slate-900/50 px-2 py-1 rounded border border-slate-700">
+                                <Search size={14} />
+                                <input type="text" placeholder="Filter..." className="bg-transparent border-none outline-none w-24 text-xs font-mono" />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            {isUploading && (
+                                <div className="flex items-center gap-3 p-3 bg-slate-900/50 border-b border-white/5 animate-pulse">
+                                    <Upload size={16} className="text-emerald-400" />
+                                    <span className="text-xs font-mono text-emerald-400">UPLOADING DATA STREAM...</span>
+                                </div>
+                            )}
+                            
+                            <div className="grid grid-cols-1 gap-1">
+                                {visibleFiles.map(file => {
+                                    const style = getFileIcon(file.type);
+                                    const Icon = style.icon;
+                                    
+                                    return (
+                                        <div key={file.id} 
+                                             onClick={() => file.type === 'folder' ? setCurrentFolderId(file.id) : handleDownload(event, file)}
+                                             className="flex items-center justify-between p-3 hover:bg-white/5 rounded cursor-pointer group transition-colors border border-transparent hover:border-white/5"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`p-2 rounded ${style.bg} ${style.color}`}>
+                                                    <Icon size={18} />
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-medium text-slate-200 group-hover:text-white">{file.name}</div>
+                                                    <div className="text-[10px] text-slate-500 font-mono uppercase">{file.type}</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-xs font-mono text-slate-500">{file.type === 'folder' ? '--' : formatBytes(file.size)}</span>
+                                                
+                                                <button onClick={(e) => handleDelete(e, file)} className="p-2 hover:bg-white/10 rounded text-slate-500 hover:text-red-400 transition-colors">
+                                                    <Trash2 size={16} />
+                                                </button>
+
+                                                <button onClick={(e) => handleDownload(e, file)} className="p-2 hover:bg-white/10 rounded text-slate-500 hover:text-cyan-400 transition-colors">
+                                                    {file.type === 'folder' ? <ChevronRight size={16} /> : <Download size={16} />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                                {visibleFiles.length === 0 && !isUploading && (
+                                    <div className="text-center py-10 text-slate-600 font-mono text-xs italic">
+                                        Directory Empty. Awaiting Data.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </CyberCard>
+                </div>
+            );
+        };
+
+        // --- NEW SETTINGS VIEW ---
+        const SettingsView = ({ userProfile, setUserProfile }) => {
+            const [username, setUsername] = useState(userProfile.name);
+            const [avatar, setAvatar] = useState(userProfile.avatar);
+            const [oldPass, setOldPass] = useState("");
+            const [newPass, setNewPass] = useState("");
+            const [confirmPass, setConfirmPass] = useState("");
+            const [status, setStatus] = useState("");
+
+            const handleAvatarUpload = () => {
+                // Mock upload logic
+                const fileInput = document.createElement("input");
+                fileInput.type = "file";
+                fileInput.accept = "image/*";
+                fileInput.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setAvatar(ev.target.result);
+                        reader.readAsDataURL(file);
+                    }
+                };
+                fileInput.click();
+            };
+
+            const handleSaveProfile = () => {
+                // In a real app, send to backend
+                setUserProfile({ name: username, avatar: avatar });
+                setStatus("Profile updated successfully.");
+                setTimeout(() => setStatus(""), 3000);
+            };
+
+            const handleChangePassword = async (e) => {
+                e.preventDefault();
+                if (newPass !== confirmPass) {
+                    setStatus("Error: Passwords do not match.");
+                    return;
+                }
+                
+                try {
+                    const res = await authFetch('/auth/change-password', {
+                        method: 'POST',
+                        body: JSON.stringify({ old_password: oldPass, new_password: newPass })
+                    });
+                    
+                    if (res && res.ok) {
+                        setStatus("Security credentials updated.");
+                        setOldPass(""); setNewPass(""); setConfirmPass("");
+                    } else {
+                        setStatus("Error: Could not update password. (Demo mode?)");
+                    }
+                } catch (err) {
+                    setStatus("Error: Connection failed.");
+                }
+                setTimeout(() => setStatus(""), 3000);
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto animate-in fade-in duration-500 space-y-6">
+                    <div className="flex items-center gap-3 mb-4">
+                        <Settings className="text-cyan-400 animate-spin-slow" size={24} />
+                        <h1 className="text-2xl font-black tracking-tighter text-white italic">USER CONFIGURATION</h1>
+                    </div>
+
+                    {status && (
+                        <div className="bg-emerald-900/30 border border-emerald-500/50 text-emerald-400 p-3 rounded text-sm font-mono flex items-center gap-2 animate-in slide-in-from-top-2">
+                            <CheckCircle size={16} /> {status}
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* PROFILE CARD */}
+                        <CyberCard title="PROFILE IDENTITY" icon={User}>
+                            <div className="flex flex-col items-center gap-6 py-4">
+                                <div className="relative group cursor-pointer" onClick={handleAvatarUpload}>
+                                    <div className="w-32 h-32 rounded-full border-2 border-cyan-500/50 overflow-hidden bg-slate-900 flex items-center justify-center relative">
+                                        {avatar ? (
+                                            <img src={avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={48} className="text-slate-600" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Camera className="text-white" />
+                                        </div>
+                                    </div>
+                                    <div className="absolute bottom-0 right-0 p-1.5 bg-cyan-600 rounded-full border border-black">
+                                        <Upload size={12} className="text-white" />
+                                    </div>
+                                </div>
+
+                                <div className="w-full space-y-4">
+                                    <div>
+                                        <label className="block text-[10px] font-mono text-slate-500 mb-1 uppercase tracking-widest">Callsign</label>
+                                        <input 
+                                            type="text" 
+                                            value={username} 
+                                            onChange={(e) => setUsername(e.target.value)} 
+                                            className="w-full bg-black/30 border border-slate-700 rounded p-3 text-white font-mono focus:border-cyan-500 outline-none transition-colors" 
+                                        />
+                                    </div>
+                                    <button onClick={handleSaveProfile} className="w-full py-3 bg-cyan-900/30 border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-black font-bold rounded transition-all uppercase tracking-widest text-xs">
+                                        Save Profile
+                                    </button>
+                                </div>
+                            </div>
+                        </CyberCard>
+
+                        {/* SECURITY CARD */}
+                        <CyberCard title="SECURITY CLEARANCE" icon={Lock}>
+                            <form onSubmit={handleChangePassword} className="flex flex-col gap-4 py-2">
+                                <div>
+                                    <label className="block text-[10px] font-mono text-slate-500 mb-1 uppercase tracking-widest">Current Passcode</label>
+                                    <input 
+                                        type="password" 
+                                        value={oldPass} 
+                                        onChange={(e) => setOldPass(e.target.value)} 
+                                        className="w-full bg-black/30 border border-slate-700 rounded p-3 text-white font-mono focus:border-red-500 outline-none transition-colors" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-mono text-slate-500 mb-1 uppercase tracking-widest">New Passcode</label>
+                                    <input 
+                                        type="password" 
+                                        value={newPass} 
+                                        onChange={(e) => setNewPass(e.target.value)} 
+                                        className="w-full bg-black/30 border border-slate-700 rounded p-3 text-white font-mono focus:border-emerald-500 outline-none transition-colors" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-mono text-slate-500 mb-1 uppercase tracking-widest">Confirm Passcode</label>
+                                    <input 
+                                        type="password" 
+                                        value={confirmPass} 
+                                        onChange={(e) => setConfirmPass(e.target.value)} 
+                                        className="w-full bg-black/30 border border-slate-700 rounded p-3 text-white font-mono focus:border-emerald-500 outline-none transition-colors" 
+                                    />
+                                </div>
+                                <div className="mt-4">
+                                    <button type="submit" className="w-full py-3 bg-red-900/20 border border-red-500/50 text-red-400 hover:bg-red-500 hover:text-white font-bold rounded transition-all uppercase tracking-widest text-xs">
+                                        Update Access Codes
+                                    </button>
+                                </div>
+                            </form>
+                        </CyberCard>
+                    </div>
+                </div>
+            );
+        };
+
+        const ServerSelector = ({ selected, onSelect }) => { const [isOpen, setIsOpen] = useState(false); const menuRef = useRef(null); useEffect(() => { const handleClickOutside = (event) => { if (menuRef.current && !menuRef.current.contains(event.target)) { setIsOpen(false); } }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []); return ( <div className="relative z-50" ref={menuRef}> <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-2 text-xs font-mono font-bold text-slate-300 hover:text-white transition-colors bg-white/5 px-3 py-1.5 rounded border border-white/10" > <Globe size={14} className="text-cyan-400" /> {selected.name} <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} /> </button> {isOpen && ( <div className="absolute top-full right-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50"> <div className="px-3 py-2 text-[10px] text-slate-500 font-mono uppercase tracking-widest border-b border-white/5 bg-black/20">Available Nodes</div> {SERVER_LIST.map((srv) => ( <button key={srv.id} onClick={() => { onSelect(srv); setIsOpen(false); }} className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-white/5 transition-colors group" > <div className="flex items-center gap-3"> <div className="relative flex h-2 w-2"> {srv.online && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>} <span className={`relative inline-flex rounded-full h-2 w-2 ${srv.online ? 'bg-emerald-500' : 'bg-red-500'}`}></span> </div> <span className={`text-xs font-mono ${selected.id === srv.id ? 'text-cyan-400' : 'text-slate-300 group-hover:text-white'}`}> {srv.name} </span> </div> {selected.id === srv.id && <Check size={12} className="text-cyan-500" />} </button> ))} </div> )} </div> ); };
+
+        const App = () => {
+            const [tab, setTab] = useState('home');
+            // Initialize from localStorage
+            const [userProfile, setUserProfile] = useState(() => {
+                const saved = localStorage.getItem('aurora_user_profile');
+                return saved ? JSON.parse(saved) : { name: "Commander", avatar: null };
+            });
+
+            // Helper to update state AND localStorage
+            const updateUserProfile = (newProfile) => {
+                setUserProfile(newProfile);
+                localStorage.setItem('aurora_user_profile', JSON.stringify(newProfile));
+            };
+
+            const [selectedServer, setSelectedServer] = useState(SERVER_LIST[0]);
+            const [files, setFiles] = useState(INITIAL_FILES);
+
+            const handleSaveNote = (filename, content) => {
+                // 1. Find or Create 'Captains Logs' folder
+                let logsFolder = files.find(f => f.name === 'Captains Logs' && f.type === 'folder' && f.parent === 'root');
+                
+                let newFiles = [...files];
+                let parentId = 'root';
+
+                if (!logsFolder) {
+                    logsFolder = { id: 'logs_folder', name: 'Captains Logs', type: 'folder', parent: 'root' };
+                    newFiles.push(logsFolder);
+                    parentId = logsFolder.id;
+                } else {
+                    parentId = logsFolder.id;
+                }
+
+                // 2. Create File
+                const newFile = {
+                    id: Date.now(),
+                    name: filename,
+                    type: 'doc',
+                    size: new Blob([content]).size,
+                    parent: parentId
+                };
+                newFiles.push(newFile);
+                setFiles(newFiles);
+                alert("Log saved to Aurora-Nova/Captains Logs");
+            };
+
+
+            const NavBtn = ({ id, icon: Icon, label }) => (
+                <button 
+                    onClick={() => setTab(id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-300 group ${tab === id ? 'bg-cyan-950/50 text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]' : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'}`}
+                >
+                    <Icon size={18} className={tab === id ? "drop-shadow-[0_0_5px_currentColor]" : ""} />
+                    <span className="font-mono text-xs font-bold tracking-widest">{label}</span>
+                    {tab === id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_5px_currentColor]" />}
+                </button>
+            );
+
+            return (
+                <div className="flex h-screen w-full bg-[#020617] text-slate-200">
+                    {/* Background Grid & Effects */}
+                    <div className="fixed inset-0 pointer-events-none z-0">
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(18,18,24,0)_1px,transparent_1px),linear-gradient(90deg,rgba(18,18,24,0)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20 border-slate-800"></div>
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-900/5 to-slate-900/80"></div>
+                        <div className="absolute inset-0 z-50 pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjAuMSIvPgo8L3N2Zz4=')] opacity-50"></div>
+                    </div>
+
+                    {/* SIDEBAR */}
+                    <aside className="w-64 bg-slate-950/80 backdrop-blur-xl border-r border-white/5 z-20 flex flex-col pt-6 pb-4 px-3 shadow-2xl">
+                        <div className="px-4 mb-8">
+                            <div className="text-2xl font-black italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-fuchsia-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.3)]">
+                                AURORA
+                            </div>
+                            <div className="text-[10px] font-mono text-slate-500 mt-1 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                SYSTEM ONLINE
+                            </div>
+                        </div>
+
+                        <nav className="flex-1 space-y-1">
+                            <NavBtn id="home" icon={Home} label="HOME" />
+                            <NavBtn id="telemetry" icon={Gauge} label="AURORA-RADIANT" />
+                            <NavBtn id="minecraft" icon={Pickaxe} label="AURORA-MIMIR" />
+                            <NavBtn id="borealis" icon={Brain} label="BOREALIS AI" />
+                            <NavBtn id="storage" icon={Database} label="AURORA-NOVA" />
+                            <NavBtn id="settings" icon={Settings} label="AURORA-SETTINGS" />
+                        </nav>
+
+                        <div className="mt-auto border-t border-white/5 pt-4 px-2">
+                            <div className="flex items-center gap-3 p-2 mb-2 rounded bg-white/5 border border-white/5">
+                                <div className="w-8 h-8 rounded bg-gradient-to-tr from-cyan-600 to-fuchsia-600 flex items-center justify-center font-bold text-xs border border-cyan-500/20 overflow-hidden">
+                                    {userProfile.avatar ? <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" /> : userProfile.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="overflow-hidden">
+                                    <div className="text-xs font-bold text-white truncate">{userProfile.name}</div>
+                                    <div className="text-[10px] text-cyan-400 font-mono">ADMIN_ACCESS</div>
+                                </div>
+                            </div>
+                            <button onClick={() => { localStorage.removeItem('aurora_token'); window.location.reload(); }} className="w-full text-left px-3 py-2 text-xs font-mono text-red-400 hover:text-red-300 hover:bg-red-900/10 rounded transition-colors flex items-center gap-2">
+                                <LogOut size={12} /> DISCONNECT
+                            </button>
+                        </div>
+                    </aside>
+
+                    {/* MAIN CONTENT */}
+                    <main className="flex-1 relative z-10 flex flex-col min-w-0">
+                        <header className="relative z-40 h-16 border-b border-white/5 flex items-center justify-between px-8 bg-slate-950/50 backdrop-blur-sm">
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-lg font-bold tracking-widest text-slate-200 uppercase">
+                                    {tab === 'minecraft' ? 'AURORA-MIMIR' : tab === 'telemetry' ? 'AURORA-RADIANT' : tab === 'home' ? 'DASHBOARD' : tab === 'storage' ? 'AURORA-NOVA' : tab === 'settings' ? 'AURORA-SETTINGS' : `${tab} MODULE`}
+                                </h2>
+                            </div>
+                            <div className="flex items-center gap-6 text-xs font-mono text-slate-500">
+                                <ServerSelector selected={selectedServer} onSelect={setSelectedServer} />
+                                <div className="flex items-center gap-2 text-cyan-500"><Wifi size={12} /> LINK_ESTABLISHED</div>
+                            </div>
+                        </header>
+
+                        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide relative z-0">
+                            {tab === 'home' && <LandingPage userProfile={userProfile} onSaveNote={handleSaveNote} />}
+                            {tab === 'telemetry' && <TelemetryView />}
+                            {tab === 'minecraft' && <MinecraftView selectedServer={selectedServer} />}
+                            {tab === 'borealis' && <BorealisView userProfile={userProfile} />}
+                            {tab === 'storage' && <AuroraNovaView files={files} setFiles={setFiles} />}
+                            {/* Pass the UPDATE function, not just the setter */}
+                            {tab === 'settings' && <SettingsView userProfile={userProfile} setUserProfile={updateUserProfile} />}
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
+        );
+    </script>
 </body>
 </html>
