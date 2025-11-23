@@ -236,17 +236,25 @@
                 return () => clearInterval(timer);
             }, []);
 
+            // Calculate degrees
             const secDeg = (time.getSeconds() / 60) * 360;
             const minDeg = (time.getMinutes() / 60) * 360 + (time.getSeconds() / 60) * 6;
             const hourDeg = (time.getHours() / 12) * 360 + (time.getMinutes() / 60) * 30;
 
             return (
                 <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
+                    {/* Outer Glow Ring */}
                     <div className="absolute inset-0 rounded-full border border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.4)] animate-pulse"></div>
+                    
+                    {/* Inner Clock Face */}
                     <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-black/60 border border-orange-500/20 relative shadow-inner flex items-center justify-center backdrop-blur-sm">
+                        {/* Center Dot */}
                         <div className="w-2 h-2 bg-orange-400 rounded-full z-20 shadow-[0_0_10px_rgba(249,115,22,1)]"></div>
+
+                        {/* Hands */}
                         <div className="absolute w-[3px] h-[35px] md:h-[45px] bg-orange-600/80 origin-bottom bottom-1/2 left-[calc(50%-1.5px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(234,88,12,0.5)]" style={{ transform: `rotate(${hourDeg}deg)` }}></div>
                         <div className="absolute w-[2px] h-[45px] md:h-[55px] bg-orange-500/90 origin-bottom bottom-1/2 left-[calc(50%-1px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(249,115,22,0.5)]" style={{ transform: `rotate(${minDeg}deg)` }}></div>
+                        {/* Second Hand - Brighter, Thinner */}
                         <div className="absolute w-[1px] h-[50px] md:h-[60px] bg-orange-300 origin-bottom bottom-1/2 left-[calc(50%-0.5px)] z-10 shadow-[0_0_8px_rgba(253,186,116,0.9)] transition-transform duration-200 ease-out" style={{ transform: `rotate(${secDeg}deg)` }}></div>
                     </div>
                 </div>
@@ -367,7 +375,9 @@
         };
 
         const WeatherVisuals = ({ condition, className = "" }) => {
+            // Animerade väder-ikoner
             const is = (str) => condition.toLowerCase().includes(str);
+            
             return (
                 <div className={`relative w-full h-full flex items-center justify-center pointer-events-none ${className}`}>
                   {is('sunny') || is('clear') ? (
@@ -1547,3 +1557,40 @@
     </script>
 </body>
 </html>
+
+```
+
+Felet "Inline Babel script:503 Auto login failed. Ensure Docker Manager is running on port 8001. TypeError: Failed to fetch" beror, precis som det står, på att webbläsaren inte kan nå din Docker Manager backend på port 8001.
+
+**Det här är vad som händer:**
+Du har en backend för huvudapplikationen (sannolikt på port 8000) och en *separat* backend för Docker-hantering på port 8001. Din frontend (React-koden i `index.html`) försöker göra ett anrop (`fetch`) till `http://<din-server-ip>:8001/api/login` för att logga in automatiskt.
+
+När du får `TypeError: Failed to fetch` och `net::ERR_CONNECTION_REFUSED` betyder det att antingen:
+1.  Tjänsten på port 8001 är **inte startad**.
+2.  Tjänsten är startad men **lyssnar inte på rätt nätverksinterface** (t.ex. bara på `localhost` inne i sin container/server, men inte utåt mot ditt LAN/internet).
+3.  En **brandvägg** blockerar port 8001.
+4.  Din webbläsare blockerar anropet p.g.a **Mixed Content** (om du kör huvudappen via HTTPS men anropar Docker-backend via HTTP).
+
+**Lösning (Steg-för-steg):**
+
+1.  **Kontrollera att containern körs:**
+    Gå in på servern via SSH och kör `docker ps`. Du ska se `aurora-docker-manager` i listan och att den mappar port `0.0.0.0:8001->8000/tcp`.
+    * Om den inte körs: Kör `docker-compose up -d` i mappen `docker_manager`.
+
+2.  **Kontrollera portmappningen:**
+    I din `docker-compose.yml` för docker_manager, se till att ports är definierade så här:
+    ```yaml
+    ports:
+      - "8001:8000"
+    ```
+    Och i din `Dockerfile` eller `uvicorn`-kommando, se till att host är satt till `0.0.0.0` (inte `127.0.0.1`):
+    ```bash
+    CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ```
+    *(Detta ser korrekt ut i filerna du skickade tidigare, men dubbelkolla på servern).*
+
+3.  **Öppna porten:**
+    Om du kör Ubuntu med UFW (brandvägg), måste du tillåta port 8001:
+    ```bash
+    sudo ufw allow 8001/tcp
+    sudo ufw reload
