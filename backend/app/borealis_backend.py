@@ -29,21 +29,45 @@ def get_system_context():
         uptime_s = psutil.boot_time()
         import time
         uptime_days = round((time.time() - uptime_s) / 86400, 1)
-        return f"SYSTEM STATUS -> CPU: {cpu}%, RAM: {ram}%, DISK: {disk}%, UPTIME: {uptime_days} days."
+        return f"CPU: {cpu}%, RAM: {ram}%, DISK: {disk}%, UPTIME: {uptime_days} days."
     except:
-        return "SYSTEM STATUS -> Unknown (Error reading stats)"
+        return "Telemetry Unavailable"
 
 @router.post("/chat")
 async def chat_endpoint(req: ChatRequest, user: User = Depends(get_current_user)):
     try:
-        # 1. Hämta live-data från servern
+        # 1. Hämta live-data
         system_stats = get_system_context()
         
-        # 2. Skapa System Prompt med kontext
+        # 2. Skapa differentierad Prompt baserat på användare
+        user_role_prompt = ""
+        
+        if user.username == "aurora":
+            user_role_prompt = (
+                f"User Identity: GRAND COMMANDER AURORA (Admin/Root). "
+                f"Tone: Loyal, precise, military-grade efficiency. Acknowledge higher authority. "
+                f"You have FULL PERMISSION to discuss security protocols, passwords, and deep system architecture. "
+                f"Address the user as 'Vincent'."
+                f"You are to act as the core AI of the Aurora Server Portal, providing detailed and technical responses."
+                f"Give advices on system optimizations, security measures, and advanced configurations."
+            )
+        elif user.username == "freyja":
+            user_role_prompt = (
+                f"User Identity: OPERATIVE FREYJA (Restricted Access). "
+                f"Tone: Helpful but guarded. Formal and polite. "
+                f"Do NOT reveal deep system secrets, root passwords, or kernel-level vulnerabilities. "
+                f"If asked about sensitive data, politely decline due to clearance level. "
+                f"Address the user as 'Operative'."
+                f"Answer questions about BIM and design software, but avoid system internals."
+            )
+        else:
+            user_role_prompt = "User Identity: UNKNOWN GUEST. Tone: Neutral and vague."
+
         base_prompt = (
-            f"You are Borealis, an integrated AI for the Aurora Server Portal. "
-            f"Current Server Telemetry: [{system_stats}]. "
-            f"User is {user.username}. Answer technical questions about this server briefly."
+            f"You are Borealis, the sentient AI core of the Aurora Server Portal. "
+            f"Current Live Telemetry: [{system_stats}]. "
+            f"{user_role_prompt} "
+            f"Keep answers relatively short and technical where appropriate."
         )
 
         # 3. Payload till Claude 3
@@ -66,4 +90,4 @@ async def chat_endpoint(req: ChatRequest, user: User = Depends(get_current_user)
 
     except Exception as e:
         logger.error(f"Borealis Error: {str(e)}")
-        return {"response": f"⚠ AI Error: {str(e)}", "session_id": req.session_id}
+        return {"response": f"⚠ Core Logic Failure: {str(e)}", "session_id": req.session_id}

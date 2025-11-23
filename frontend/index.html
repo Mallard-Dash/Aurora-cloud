@@ -32,8 +32,8 @@
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Google Fonts: VT323 for Minecraft feel -->
-    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts: Orbitron (Cybero-style), Inter, VT323 -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&family=VT323&display=swap" rel="stylesheet">
 
     <style>
         /* Scrollbar Styles */
@@ -47,12 +47,12 @@
 
         body { background-color: #020617; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; }
         
-        /* Smooth fade in */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
-        
-        /* Minecraft Font Class */
-        .font-minecraft { font-family: 'VT323', monospace; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Typography Classes */
+        .font-cybero { font-family: 'Orbitron', sans-serif; letter-spacing: 0.05em; }
+        .font-mono-logs { font-family: 'VT323', monospace; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 overflow-hidden selection:bg-teal-500/30 selection:text-teal-100">
@@ -69,7 +69,7 @@
           Calendar, ChevronLeft, ChevronRight, Plus, Check, Thermometer, Clock, ArrowUp, ArrowDown,
           Folder, Download, Upload, CornerLeftUp, Music, Video, File, PenTool, Hash, TrendingUp, LogOut,
           MemoryStick, Disc, ShieldCheck, Brain, Moon, Bell, MapPin, CheckCircle, RotateCcw, Users, Settings,
-          Home, Hammer, Cog, Sparkles, Layers, PlugZap, DollarSign, Camera, HeartPulse, Search, Filter, Box, LockKeyhole
+          Home, Hammer, Cog, Sparkles, Layers, PlugZap, DollarSign, Camera, HeartPulse, Search, Filter, Box, LockKeyhole, CloudLightning, CloudSnow
         } from 'lucide-react';
 
         // --- 1. HELPERS & UTILS ---
@@ -81,7 +81,6 @@
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             };
-            // Remove content-type for FormData (file uploads)
             if (options.body instanceof FormData) {
                 delete headers['Content-Type'];
             }
@@ -94,7 +93,7 @@
                 }
                 return res;
             } catch (e) {
-                console.warn(`API fallback för ${url}`);
+                console.warn(`API fallback för ${url}`, e);
                 return null; 
             }
         };
@@ -229,6 +228,39 @@
 
         // --- 4. VISUALS ---
 
+        const PlasmaClock = () => {
+            const [time, setTime] = useState(new Date());
+
+            useEffect(() => {
+                const timer = setInterval(() => setTime(new Date()), 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // Calculate degrees
+            const secDeg = (time.getSeconds() / 60) * 360;
+            const minDeg = (time.getMinutes() / 60) * 360 + (time.getSeconds() / 60) * 6;
+            const hourDeg = (time.getHours() / 12) * 360 + (time.getMinutes() / 60) * 30;
+
+            return (
+                <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
+                    {/* Outer Glow Ring */}
+                    <div className="absolute inset-0 rounded-full border border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.4)] animate-pulse"></div>
+                    
+                    {/* Inner Clock Face */}
+                    <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-black/60 border border-orange-500/20 relative shadow-inner flex items-center justify-center backdrop-blur-sm">
+                        {/* Center Dot */}
+                        <div className="w-2 h-2 bg-orange-400 rounded-full z-20 shadow-[0_0_10px_rgba(249,115,22,1)]"></div>
+
+                        {/* Hands */}
+                        <div className="absolute w-[3px] h-[35px] md:h-[45px] bg-orange-600/80 origin-bottom bottom-1/2 left-[calc(50%-1.5px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(234,88,12,0.5)]" style={{ transform: `rotate(${hourDeg}deg)` }}></div>
+                        <div className="absolute w-[2px] h-[45px] md:h-[55px] bg-orange-500/90 origin-bottom bottom-1/2 left-[calc(50%-1px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(249,115,22,0.5)]" style={{ transform: `rotate(${minDeg}deg)` }}></div>
+                        {/* Second Hand - Brighter, Thinner */}
+                        <div className="absolute w-[1px] h-[50px] md:h-[60px] bg-orange-300 origin-bottom bottom-1/2 left-[calc(50%-0.5px)] z-10 shadow-[0_0_8px_rgba(253,186,116,0.9)] transition-transform duration-200 ease-out" style={{ transform: `rotate(${secDeg}deg)` }}></div>
+                    </div>
+                </div>
+            );
+        };
+
         const CircularGauge = ({ value, max = 100, label, unit, color = "stroke-teal-500" }) => {
           const radius = 36;
           const circumference = 2 * Math.PI * radius;
@@ -341,14 +373,44 @@
           return <canvas ref={canvasRef} className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 transition-opacity duration-1000" style={{ backgroundColor: theme.canvas }} />;
         };
 
-        const WeatherVisuals = ({ condition, className = "" }) => (
-            <div className={`relative w-full h-full flex items-center justify-center pointer-events-none ${className}`}>
-              {(condition.includes('clear') || condition.includes('sunny')) && <Sun className="text-amber-400 drop-shadow-[0_0_25px_rgba(251,191,36,0.5)]" size={80} strokeWidth={1} />}
-              {(condition.includes('rain') || condition.includes('drizzle')) && <CloudRain className="text-blue-400 drop-shadow-[0_0_25px_rgba(96,165,250,0.5)]" size={80} strokeWidth={1} />}
-              {condition.includes('cloud') && <Cloud className="text-slate-400 drop-shadow-[0_0_25px_rgba(148,163,184,0.3)]" size={80} strokeWidth={1} />}
-              {condition.includes('snow') && <div className="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] animate-pulse text-6xl font-thin">*</div>}
-            </div>
-        );
+        const WeatherVisuals = ({ condition, className = "" }) => {
+            // Animerade väder-ikoner
+            const is = (str) => condition.toLowerCase().includes(str);
+            
+            return (
+                <div className={`relative w-full h-full flex items-center justify-center pointer-events-none ${className}`}>
+                  {is('sunny') || is('clear') ? (
+                      <div className="relative">
+                          <Sun className="text-amber-400 animate-[spin_12s_linear_infinite]" size={80} strokeWidth={1.5} />
+                          <div className="absolute inset-0 bg-amber-400/30 blur-2xl rounded-full animate-pulse"></div>
+                      </div>
+                  ) : is('rain') || is('drizzle') ? (
+                     <div className="relative">
+                         <CloudRain className="text-blue-400" size={80} strokeWidth={1.5} />
+                         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+                             <div className="w-1 h-4 bg-blue-400/50 rounded-full animate-[bounce_1s_infinite]"></div>
+                             <div className="w-1 h-4 bg-blue-400/50 rounded-full animate-[bounce_1.2s_infinite] delay-100"></div>
+                         </div>
+                     </div>
+                  ) : is('snow') ? (
+                     <div className="relative">
+                         <CloudSnow className="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" size={80} strokeWidth={1.5} />
+                         <div className="absolute top-0 right-0 text-white animate-pulse text-4xl">*</div>
+                     </div>
+                  ) : is('thunder') || is('lightning') ? (
+                     <div className="relative">
+                         <CloudLightning className="text-purple-400" size={80} strokeWidth={1.5} />
+                         <Zap className="absolute bottom-0 right-2 text-yellow-400 fill-yellow-400 animate-[pulse_0.2s_infinite]" size={32} />
+                     </div>
+                  ) : (
+                     <div className="relative">
+                         <Cloud className="text-slate-400 animate-pulse" size={80} strokeWidth={1.5} />
+                         <Cloud className="absolute top-2 -right-4 text-slate-500/50" size={40} strokeWidth={1.5} />
+                     </div>
+                  )}
+                </div>
+            );
+        };
 
         const TerminalLine = ({ text }) => {
           let colorClass = "text-slate-400";
@@ -358,8 +420,8 @@
           if (text.includes("joined")) colorClass = "text-emerald-400";
           const timestamp = new Date().toLocaleTimeString('sv-SE', { hour12: false });
           return (
-            <div className="font-mono text-xs py-0.5 hover:bg-white/5 px-2 rounded transition-colors break-all border-l-2 border-transparent hover:border-white/20">
-              <span className="text-slate-600 mr-3 opacity-60">{timestamp}</span>
+            <div className="font-mono-logs text-sm py-0.5 hover:bg-white/5 px-2 rounded transition-colors break-all border-l-2 border-transparent hover:border-white/20">
+              <span className="text-slate-600 mr-3 opacity-60">[{timestamp}]</span>
               <span className={colorClass}>{text}</span>
             </div>
           );
@@ -388,9 +450,74 @@
 
         // --- 5. VIEWS ---
         
+        // --- NEW: CPU CORE VISUALIZER ---
+        const CpuCoreVisuals = ({ cores }) => {
+            if (!cores || cores.length === 0) return <div className="text-slate-500">Initializing Neural Core...</div>;
+            
+            const centerX = 150;
+            const centerY = 150;
+            const radius = 100;
+            const angleStep = (2 * Math.PI) / cores.length;
+
+            return (
+                <div className="relative w-full h-[320px] flex items-center justify-center">
+                    <svg width="300" height="300" viewBox="0 0 300 300" className="overflow-visible">
+                        {/* Central CPU Chip */}
+                        <g transform={`translate(${centerX - 24}, ${centerY - 24})`}>
+                            <rect x="0" y="0" width="48" height="48" rx="8" fill="#0f172a" stroke="#2dd4bf" strokeWidth="2" className="animate-pulse" />
+                            <path d="M12 12h24v24h-24z" fill="#2dd4bf" fillOpacity="0.2" />
+                            <Cpu size={32} className="text-teal-400" x="8" y="8" />
+                        </g>
+
+                        {/* Connections and Nodes */}
+                        {cores.map((core, i) => {
+                            const angle = i * angleStep - Math.PI / 2; // Start at top
+                            const x = centerX + radius * Math.cos(angle);
+                            const y = centerY + radius * Math.sin(angle);
+                            const isHot = core.temp > 80;
+                            const isHeavy = core.load > 80;
+                            const lineColor = isHot ? '#f43f5e' : isHeavy ? '#fbbf24' : '#2dd4bf';
+
+                            return (
+                                <g key={core.id}>
+                                    {/* Connection Line */}
+                                    <line 
+                                        x1={centerX} y1={centerY} 
+                                        x2={x} y2={y} 
+                                        stroke={lineColor} 
+                                        strokeWidth={core.load > 50 ? 2 : 1} 
+                                        strokeOpacity="0.4"
+                                        strokeDasharray="4"
+                                        className={core.load > 50 ? "animate-[dash_1s_linear_infinite]" : ""}
+                                    />
+                                    
+                                    {/* Core Node Container (ForeignObject for HTML content in SVG) */}
+                                    <foreignObject x={x - 40} y={y - 25} width="80" height="50">
+                                        <div className={`flex flex-col items-center justify-center p-1 rounded border bg-slate-950/90 backdrop-blur ${isHot ? 'border-rose-500 text-rose-400' : 'border-teal-500/30 text-teal-300'} text-[10px] shadow-lg`}>
+                                            <div className="font-bold tracking-wider">CORE {core.id}</div>
+                                            <div className="flex gap-2 mt-0.5">
+                                                <span className={isHeavy ? 'text-amber-400 font-bold' : 'text-slate-400'}>{Math.round(core.load)}%</span>
+                                                <span className="text-slate-500">|</span>
+                                                <span className={isHot ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{Math.round(core.temp)}°C</span>
+                                            </div>
+                                        </div>
+                                    </foreignObject>
+                                </g>
+                            );
+                        })}
+                    </svg>
+                </div>
+            );
+        };
+
         // --- NEW DOCKER VIEW ---
         const DockerView = ({ theme, username }) => {
-            const API_BASE = "http://localhost:8001/api";
+            const [apiBase, setApiBase] = useState("");
+            
+            useEffect(() => {
+                setApiBase(`http://${window.location.hostname}:8001/api`);
+            }, []);
+
             const [token, setToken] = useState(localStorage.getItem('docker_token') || '');
             const [containers, setContainers] = useState([]);
             const [templates, setTemplates] = useState([]);
@@ -401,31 +528,32 @@
             const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
 
             const dockerFetch = async (endpoint, options = {}) => {
+                if (!apiBase) return null;
                 const headers = { 'Content-Type': 'application/json', ...options.headers };
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 try {
-                    const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+                    const res = await fetch(`${apiBase}${endpoint}`, { ...options, headers });
                     if (res.status === 401) {
                         setToken('');
                         localStorage.removeItem('docker_token');
                     }
                     return res;
                 } catch (e) {
-                    console.error("Docker API Error", e);
+                    console.error("Docker API Error (Check Port 8001 Firewall)", e);
                     return null;
                 }
             };
 
             // Auto-login for 'aurora'
             useEffect(() => {
-                if (username === 'aurora' && !token && !isAutoLoggingIn) {
+                if (apiBase && username === 'aurora' && !token && !isAutoLoggingIn) {
                     const autoLogin = async () => {
                         setIsAutoLoggingIn(true);
                         try {
-                            const res = await fetch(`${API_BASE}/login`, {
+                            const res = await fetch(`${apiBase}/login`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ username: 'admin', password: 'admin' }) // Using default backend creds
+                                body: JSON.stringify({ username: 'admin', password: 'admin' }) 
                             });
                             if (res.ok) {
                                 const data = await res.json();
@@ -433,13 +561,13 @@
                                 localStorage.setItem('docker_token', data.access_token);
                             }
                         } catch(e) {
-                            console.error("Auto login failed", e);
+                            console.error("Auto login failed. Ensure Docker Manager is running on port 8001.", e);
                         }
                         setIsAutoLoggingIn(false);
                     };
                     autoLogin();
                 }
-            }, [username, token, isAutoLoggingIn]);
+            }, [apiBase, username, token, isAutoLoggingIn]);
 
             const loadData = async () => {
                 if (!token) return;
@@ -509,7 +637,7 @@
                 return (
                     <div className="flex items-center justify-center h-[60vh] flex-col gap-4">
                         <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
-                        <div className="text-xs text-teal-500 animate-pulse">Authenticating Docker Manager...</div>
+                        <div className="text-xs text-teal-500 animate-pulse">Connecting to Docker Core ({apiBase || "..."})...</div>
                     </div>
                 );
             }
@@ -626,10 +754,10 @@
                     
                     <div className="col-span-3 h-full flex flex-col bg-[#0c0c12] rounded-2xl border border-white/5 overflow-hidden shadow-inner relative">
                         <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5">
-                            <div className="text-xs font-mono text-teal-400 flex items-center gap-2"><Terminal size={12} /> /var/log/{source}.log</div>
+                            <div className="text-xs font-mono-logs text-teal-400 flex items-center gap-2"><Terminal size={12} /> /var/log/{source}.log</div>
                             <div className="text-xs text-slate-500">{logs.length} lines</div>
                         </div>
-                        <div ref={logEndRef} className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1 custom-scrollbar">
+                        <div ref={logEndRef} className="flex-1 overflow-y-auto p-4 font-mono-logs text-xs space-y-1 custom-scrollbar">
                             {logs.map((line, i) => (
                                 <div key={i} className="text-slate-300 hover:bg-white/5 hover:text-white px-1 py-0.5 break-all border-l-2 border-transparent hover:border-teal-500/50">
                                     {line}
@@ -659,17 +787,29 @@
           const [accumulatedKwh, setAccumulatedKwh] = useState(0);
           const [startTime] = useState(Date.now());
 
+          // NEW STATES for Core Visualization
+          const [cpuCores, setCpuCores] = useState([]);
+          const [procCount, setProcCount] = useState(0);
+          const [diskReadSpeed, setDiskReadSpeed] = useState(0);
+          const [diskWriteSpeed, setDiskWriteSpeed] = useState(0);
+          const [diskIOHistory, setDiskIOHistory] = useState(Array(30).fill(0));
+          const lastDiskStats = useRef({ read: 0, write: 0, time: Date.now() });
+
           const fetchData = async () => {
-            // RIKTIG LIVE-DATA ANROP
             const res = await authFetch('/api/system/stats');
             if (!res || !res.ok) return;
             try {
                 const stats = await res.json();
-                setCpuLoad(stats.cpu_pct); setCpuTemp(stats.temp || 0);
+                setCpuLoad(stats.cpu_pct); 
+                setCpuTemp(stats.temp || 0);
                 setRamUsed(stats.ram_used / (1024**3)); setRamTotal(stats.ram_total / (1024**3));
                 setDiskUsed(stats.disk_used / (1024**3)); setDiskTotal(stats.disk_total / (1024**3));
                 setCpuHistory(prev => [...prev.slice(1), stats.cpu_pct]);
                 
+                // New stats mapping
+                setProcCount(stats.process_count || 0);
+                setCpuCores(stats.cpu_cores || []);
+
                 const estimatedWatts = 100 + ((stats.cpu_pct / 100) * 250);
                 setCurrentWatts(estimatedWatts);
                 
@@ -684,6 +824,19 @@
                     setNetUpHistory(prev => [...prev.slice(1), Math.max(0, (bytesUp * 8) / (1024 * 1024) / timeDiff)]);
                 }
                 lastNetStats.current = { recv: stats.net_recv, sent: stats.net_sent, time: now };
+
+                // Disk I/O Calc (MB/s)
+                if (timeDiff > 0 && lastDiskStats.current.read > 0) {
+                    const readDiff = stats.disk_io_read - lastDiskStats.current.read;
+                    const writeDiff = stats.disk_io_write - lastDiskStats.current.write;
+                    const rSpeed = Math.max(0, readDiff / (1024*1024) / timeDiff);
+                    const wSpeed = Math.max(0, writeDiff / (1024*1024) / timeDiff);
+                    setDiskReadSpeed(rSpeed);
+                    setDiskWriteSpeed(wSpeed);
+                    setDiskIOHistory(prev => [...prev.slice(1), rSpeed + wSpeed]);
+                }
+                lastDiskStats.current = { read: stats.disk_io_read, write: stats.disk_io_write, time: now };
+
             } catch(e) {}
           };
 
@@ -697,59 +850,51 @@
             <div className="space-y-6 animate-fade-in pb-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <GlowCard title="Processor" icon={Brain}>
-                  <CircularGauge value={cpuLoad} max={100} unit="%" label="CPU LOAD" color={getLoadColor(cpuLoad)} />
+                  <CircularGauge value={cpuLoad} max={100} unit="%" label="TOTAL LOAD" color={getLoadColor(cpuLoad)} />
                 </GlowCard>
                 <GlowCard title="Memory" icon={MemoryStick}>
                   <CircularGauge value={Math.round((ramUsed / ramTotal) * 100) || 0} max={100} unit="%" label={`${ramUsed.toFixed(1)}/${ramTotal.toFixed(0)} GB`} color="stroke-indigo-400 text-indigo-400" />
                 </GlowCard>
                 <GlowCard title="Thermal" icon={Zap}>
-                  <CircularGauge value={Math.round(cpuTemp)} max={100} unit="°C" label="CORE TEMP" color={cpuTemp > 80 ? "stroke-rose-500" : "stroke-emerald-400 text-emerald-400"} />
+                  <CircularGauge value={Math.round(cpuTemp)} max={100} unit="°C" label="PACKAGE" color={cpuTemp > 80 ? "stroke-rose-500" : "stroke-emerald-400 text-emerald-400"} />
                 </GlowCard>
-                <GlowCard title="Storage" icon={Disc}>
-                  <CircularGauge value={Math.round((diskUsed / diskTotal) * 100) || 0} max={100} unit="%" label={`${Math.round(diskUsed)}GB USED`} color="stroke-cyan-400 text-cyan-400" />
+                <GlowCard title="Active Procs" icon={Activity}>
+                   <div className="flex flex-col items-center justify-center h-full">
+                       <span className="text-4xl font-light text-white font-mono">{procCount}</span>
+                       <span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase mt-2">Running Tasks</span>
+                   </div>
                 </GlowCard>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <GlowCard title="CPU Activity" icon={Activity} className="col-span-1">
-                  <div className="h-full w-full flex flex-col justify-between min-h-[140px]">
-                     <div className="flex justify-between items-end mb-4 px-2">
-                        <div><div className={`text-3xl font-light ${theme.text}`}>{Math.round(cpuLoad)}%</div><div className={`text-xs ${theme.textDim} uppercase tracking-wider`}>Current Load</div></div>
-                        <Cpu className="text-teal-500/20" size={48} />
-                     </div>
-                     <div className="h-16 w-full px-2"><Sparkline data={cpuHistory} color="#2dd4bf" height={60} /></div>
-                  </div>
-                </GlowCard>
                 <GlowCard title="Network Traffic" icon={Wifi} className="col-span-1 md:col-span-2">
                   <div className="grid grid-cols-2 gap-8 h-full w-full px-4">
                     <div>
-                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Inbound (RX)</span><span className={`text-lg font-mono ${theme.text}`}>{netDownHistory[netDownHistory.length -1].toFixed(1)} Mb/s</span></div>
+                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Down (RX)</span><span className={`text-lg font-mono ${theme.text}`}>{netDownHistory[netDownHistory.length -1].toFixed(1)} Mb/s</span></div>
                       <div className="h-24 w-full bg-gradient-to-b from-emerald-500/5 to-transparent rounded-lg border-b border-emerald-500/20"><Sparkline data={netDownHistory} color="#34d399" height={80} /></div>
                     </div>
                     <div>
-                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Outbound (TX)</span><span className={`text-lg font-mono ${theme.text}`}>{netUpHistory[netUpHistory.length -1].toFixed(1)} Mb/s</span></div>
+                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Up (TX)</span><span className={`text-lg font-mono ${theme.text}`}>{netUpHistory[netUpHistory.length -1].toFixed(1)} Mb/s</span></div>
                       <div className="h-24 w-full bg-gradient-to-b from-indigo-500/5 to-transparent rounded-lg border-b border-indigo-500/20"><Sparkline data={netUpHistory} color="#818cf8" height={80} /></div>
                     </div>
                   </div>
                 </GlowCard>
+
+                <GlowCard title="Disk I/O Speed" icon={HardDrive} className="col-span-1">
+                   <div className="flex flex-col justify-between h-full w-full px-2">
+                       <div className="flex flex-col gap-2 mb-4">
+                           <div className="flex justify-between"><span className="text-xs text-slate-500">READ</span><span className="text-emerald-400 font-mono">{diskReadSpeed.toFixed(1)} MB/s</span></div>
+                           <div className="flex justify-between"><span className="text-xs text-slate-500">WRITE</span><span className="text-amber-400 font-mono">{diskWriteSpeed.toFixed(1)} MB/s</span></div>
+                       </div>
+                       <div className="h-16 w-full"><Sparkline data={diskIOHistory} color="#fbbf24" height={60} /></div>
+                   </div>
+                </GlowCard>
               </div>
 
-              <GlowCard title="Power Consumption" icon={PlugZap} className="w-full">
-                  <div className="grid grid-cols-3 gap-6 w-full px-4">
-                      <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-white/5 border border-white/5">
-                          <span className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2`}>Instant Power</span>
-                          <span className="text-2xl font-mono text-amber-400 flex items-end gap-1">{Math.round(currentWatts)} <span className="text-sm text-slate-500 mb-1">W</span></span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-white/5 border border-white/5">
-                          <span className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2`}>Session Usage</span>
-                          <span className="text-2xl font-mono text-teal-400 flex items-end gap-1">{accumulatedKwh.toFixed(4)} <span className="text-sm text-slate-500 mb-1">kWh</span></span>
-                      </div>
-                      <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-white/5 border border-white/5">
-                          <span className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2`}>Est. Cost</span>
-                          <span className="text-2xl font-mono text-rose-400 flex items-end gap-1">{sessionCost.toFixed(4)} <span className="text-sm text-slate-500 mb-1">kr</span></span>
-                          <span className="text-[10px] text-slate-600 mt-1">@ 0.71 kr/kWh</span>
-                      </div>
-                  </div>
-              </GlowCard>
+              {/* NEW CORE VISUALIZER */}
+              <CyberCard title="Neural Core Architecture" className="w-full min-h-[350px] flex flex-col items-center justify-center">
+                  <CpuCoreVisuals cores={cpuCores} />
+              </CyberCard>
             </div>
           );
         };
@@ -776,13 +921,15 @@
              if (!files || files.length === 0) return;
 
              const formData = new FormData();
-             // Build relative path, excluding ROOT
              const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') : "";
              formData.append('path', relPath);
              
              for(let i = 0; i < files.length; i++) {
                  formData.append('files', files[i]);
              }
+
+             // DEBUG: Log what we are sending
+             console.log("Uploading to path:", relPath);
 
              const res = await authFetch('/api/storage/upload', {
                  method: 'POST',
@@ -791,8 +938,10 @@
              
              if(res && res.ok) {
                  fetchFiles();
+                 alert("Uppladdning lyckades!");
              } else {
-                 alert("Upload failed!");
+                 console.error("Upload error", res);
+                 alert("Uppladdning misslyckades. Kontrollera serverrättigheter (chown)!");
              }
           };
 
@@ -1159,12 +1308,12 @@
 
             return (
                 <div className="animate-fade-in space-y-8">
-                    {/* Hero Section - Updated Font to VT323 (Minecraft-like) */}
+                    {/* Hero Section - Updated Font to Playfair Display/Serif */}
                     <div className="relative p-8 rounded-3xl bg-gradient-to-r from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-white/5 overflow-hidden">
                         <div className="absolute right-0 top-0 w-64 h-64 bg-teal-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                         <div className="relative z-10">
-                            <h1 className="text-5xl md:text-6xl font-minecraft tracking-wide text-white mb-2 uppercase">
-                                {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-teal-500">{username}</span>
+                            <h1 className="text-5xl md:text-6xl font-cybero tracking-tight text-white mb-2 italic">
+                                {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-teal-500 not-italic">{username}</span>
                             </h1>
                             <div className="flex items-center gap-3 text-slate-400 text-sm font-medium mt-4">
                                 <span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div> All Systems Nominal</span>
@@ -1231,10 +1380,21 @@
                         </CyberCard>
                     </div>
 
-                     {/* Notes */}
-                     <CyberCard title="Captain's Log" actionButton={<button onClick={handleSaveLog} className="flex items-center gap-2 text-xs font-bold text-teal-400 hover:text-teal-300"><Save size={14} /> SAVE</button>}>
-                        <textarea value={logEntry} onChange={(e) => setLogEntry(e.target.value)} placeholder="Write your observations..." className="w-full h-24 bg-transparent border-none outline-none resize-none text-sm text-slate-300 placeholder:text-slate-600 leading-relaxed" spellCheck="false" />
-                    </CyberCard>
+                     {/* Notes & Plasma Clock - SIDE BY SIDE NOW */}
+                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        {/* Plasma Clock Card */}
+                        <CyberCard className="col-span-1 flex items-center justify-center min-h-[200px]">
+                            <div className="flex flex-col items-center gap-4">
+                                <PlasmaClock />
+                                <div className="text-xs font-mono text-orange-400/80 tracking-[0.2em]">SYSTEM TIME</div>
+                            </div>
+                        </CyberCard>
+
+                        {/* Captain's Log Card */}
+                        <CyberCard title="Captain's Log" className="col-span-1 md:col-span-3 min-h-[200px]" actionButton={<button onClick={handleSaveLog} className="flex items-center gap-2 text-xs font-bold text-teal-400 hover:text-teal-300"><Save size={14} /> SAVE</button>}>
+                            <textarea value={logEntry} onChange={(e) => setLogEntry(e.target.value)} placeholder="Write your observations..." className="w-full h-full bg-transparent border-none outline-none resize-none text-sm text-slate-300 placeholder:text-slate-600 leading-relaxed min-h-[120px]" spellCheck="false" />
+                        </CyberCard>
+                     </div>
 
                     <AddAppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} selectedDate={selectedDate} onSave={handleAddAppointment} />
                 </div>
@@ -1275,7 +1435,7 @@
             { id: 'neural', icon: Home, label: 'Home' },
             { id: 'telemetry', icon: Activity, label: 'Aurora-Pulstar' },
             { id: 'health', icon: HeartPulse, label: 'Aurora-Health' },
-            { id: 'docker', icon: Box, label: 'Docker Manager' }, // NY TAB
+            { id: 'docker', icon: Box, label: 'Docker Manager' },
             { id: 'minecraft', icon: Hammer, label: 'Minecraft' },
             { id: 'borealis', icon: Sparkles, label: 'Borealis AI' },
             { id: 'storage', icon: Database, label: 'Aurora-Nova' },
@@ -1285,62 +1445,14 @@
           return (
             <div className={`flex h-screen w-full ${theme.bg} transition-colors duration-700 font-sans overflow-hidden relative`}>
               <ParticleBackground theme={theme} />
-              
-              {/* Sidebar */}
               <aside className={`fixed md:relative top-0 left-0 h-full w-64 ${theme.sidebar} backdrop-blur-2xl transition-transform duration-300 ease-out z-40 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} pt-16 md:pt-0`}>
-                <div className="p-8 mb-2 hidden md:block">
-                    <div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
-                            <Zap size={18} fill="currentColor"/>
-                        </div>
-                        AURORA
-                    </div>
-                    <div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.1.0</div>
-                </div>
-
-                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">
-                  {navItems.map(item => (
-                    <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}>
-                      <item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-                      <span className="text-sm tracking-wide">{item.label}</span>
-                      {activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}
-                    </button>
-                  ))}
-                </nav>
-
-                <div className={`p-6 mt-auto`}>
-                    <button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}>
-                        <LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/>
-                        <span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span>
-                    </button>
-                </div>
+                <div className="p-8 mb-2 hidden md:block"><div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20"><Zap size={18} fill="currentColor"/></div>AURORA</div><div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div></div>
+                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">{navItems.map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}><item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} /><span className="text-sm tracking-wide">{item.label}</span>{activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}</button>))}</nav>
+                <div className={`p-6 mt-auto`}><button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}><LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/><span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span></button></div>
               </aside>
-
-              {/* Mobile Menu Button */}
-              <div className="md:hidden fixed top-4 left-4 z-50">
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">
-                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
-              </div>
-
-              {/* Main Content */}
+              <div className="md:hidden fixed top-4 left-4 z-50"><button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button></div>
               <main className="flex-1 overflow-y-auto p-4 md:p-10 relative scrollbar-thin scrollbar-thumb-slate-700/20 z-10">
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                   {/* Breadcrumb / Title */}
-                   <div className="flex flex-col">
-                       <h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2>
-                   </div>
-
-                   {/* Status Bar */}
-                   <div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}>
-                        <div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div>
-                        <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
-                        <div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div>
-                        <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
-                        <div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                   </div>
-                </header>
-                
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4"><div className="flex flex-col"><h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2></div><div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}><div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div></header>
                 {activeTab === 'neural' && <NeuralView theme={theme} username={username} />}
                 {activeTab === 'telemetry' && <TelemetryView theme={theme} />}
                 {activeTab === 'health' && <HealthView theme={theme} />}
