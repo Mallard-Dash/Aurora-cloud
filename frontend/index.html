@@ -69,7 +69,7 @@
           Calendar, ChevronLeft, ChevronRight, Plus, Check, Thermometer, Clock, ArrowUp, ArrowDown,
           Folder, Download, Upload, CornerLeftUp, Music, Video, File, PenTool, Hash, TrendingUp, LogOut,
           MemoryStick, Disc, ShieldCheck, Brain, Moon, Bell, MapPin, CheckCircle, RotateCcw, Users, Settings,
-          Home, Hammer, Cog, Sparkles, Layers, PlugZap, DollarSign, Camera, HeartPulse, Search, Filter, Box, LockKeyhole, CloudLightning, CloudSnow
+          Home, Hammer, Cog, Sparkles, Layers, PlugZap, DollarSign, Camera, HeartPulse, Search, Filter, Box, LockKeyhole, CloudLightning, CloudSnow, AlertTriangle
         } from 'lucide-react';
 
         // --- 1. HELPERS & UTILS ---
@@ -236,25 +236,17 @@
                 return () => clearInterval(timer);
             }, []);
 
-            // Calculate degrees
             const secDeg = (time.getSeconds() / 60) * 360;
             const minDeg = (time.getMinutes() / 60) * 360 + (time.getSeconds() / 60) * 6;
             const hourDeg = (time.getHours() / 12) * 360 + (time.getMinutes() / 60) * 30;
 
             return (
                 <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
-                    {/* Outer Glow Ring */}
                     <div className="absolute inset-0 rounded-full border border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.4)] animate-pulse"></div>
-                    
-                    {/* Inner Clock Face */}
                     <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-black/60 border border-orange-500/20 relative shadow-inner flex items-center justify-center backdrop-blur-sm">
-                        {/* Center Dot */}
                         <div className="w-2 h-2 bg-orange-400 rounded-full z-20 shadow-[0_0_10px_rgba(249,115,22,1)]"></div>
-
-                        {/* Hands */}
                         <div className="absolute w-[3px] h-[35px] md:h-[45px] bg-orange-600/80 origin-bottom bottom-1/2 left-[calc(50%-1.5px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(234,88,12,0.5)]" style={{ transform: `rotate(${hourDeg}deg)` }}></div>
                         <div className="absolute w-[2px] h-[45px] md:h-[55px] bg-orange-500/90 origin-bottom bottom-1/2 left-[calc(50%-1px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(249,115,22,0.5)]" style={{ transform: `rotate(${minDeg}deg)` }}></div>
-                        {/* Second Hand - Brighter, Thinner */}
                         <div className="absolute w-[1px] h-[50px] md:h-[60px] bg-orange-300 origin-bottom bottom-1/2 left-[calc(50%-0.5px)] z-10 shadow-[0_0_8px_rgba(253,186,116,0.9)] transition-transform duration-200 ease-out" style={{ transform: `rotate(${secDeg}deg)` }}></div>
                     </div>
                 </div>
@@ -284,7 +276,8 @@
 
         const Sparkline = ({ data, color = "#2dd4bf", height = 60 }) => {
           if (!data || data.length === 0) return null;
-          const max = Math.max(...data, 100); 
+          // FIX: Dynamisk max så även låg trafik syns. Minst 1 dock för att undvika div/0.
+          const max = Math.max(Math.max(...data), 1); 
           const width = 100; 
           const points = data.map((val, i) => {
             const x = (i / (data.length - 1)) * width;
@@ -374,9 +367,7 @@
         };
 
         const WeatherVisuals = ({ condition, className = "" }) => {
-            // Animerade väder-ikoner
             const is = (str) => condition.toLowerCase().includes(str);
-            
             return (
                 <div className={`relative w-full h-full flex items-center justify-center pointer-events-none ${className}`}>
                   {is('sunny') || is('clear') ? (
@@ -513,6 +504,7 @@
         // --- NEW DOCKER VIEW ---
         const DockerView = ({ theme, username }) => {
             const [apiBase, setApiBase] = useState("");
+            const [connectionError, setConnectionError] = useState(false); // New state for connection error
             
             useEffect(() => {
                 setApiBase(`http://${window.location.hostname}:8001/api`);
@@ -537,9 +529,11 @@
                         setToken('');
                         localStorage.removeItem('docker_token');
                     }
+                    setConnectionError(false); // Reset error on success
                     return res;
                 } catch (e) {
-                    console.error("Docker API Error (Check Port 8001 Firewall)", e);
+                    console.error("Docker API Error", e);
+                    setConnectionError(true); // Set error state
                     return null;
                 }
             };
@@ -559,9 +553,13 @@
                                 const data = await res.json();
                                 setToken(data.access_token);
                                 localStorage.setItem('docker_token', data.access_token);
+                                setConnectionError(false);
+                            } else {
+                                setConnectionError(true);
                             }
                         } catch(e) {
-                            console.error("Auto login failed. Ensure Docker Manager is running on port 8001.", e);
+                            console.error("Auto login failed.", e);
+                            setConnectionError(true);
                         }
                         setIsAutoLoggingIn(false);
                     };
@@ -629,6 +627,20 @@
                         <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
                         <p className="text-sm">User <span className="text-teal-400 font-mono font-bold">{username}</span> is not authorized to manage containers.</p>
                         <p className="text-xs mt-2 text-slate-600">Contact system administrator for elevation.</p>
+                    </div>
+                );
+            }
+
+            if (connectionError) {
+                return (
+                     <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 animate-fade-in">
+                        <div className="p-6 rounded-full bg-amber-500/10 border border-amber-500/20 mb-4">
+                            <AlertTriangle size={48} className="text-amber-500" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Service Unavailable</h2>
+                        <p className="text-sm">Could not connect to Docker Manager.</p>
+                        <p className="text-xs mt-2 text-slate-600 font-mono">Ensure service is running on {apiBase}</p>
+                        <button onClick={() => { setConnectionError(false); setIsAutoLoggingIn(false); }} className="mt-6 px-4 py-2 bg-white/5 hover:bg-white/10 rounded text-xs font-bold text-white border border-white/10 transition-colors">Retry Connection</button>
                     </div>
                 );
             }
@@ -781,6 +793,8 @@
           const [cpuHistory, setCpuHistory] = useState(Array(30).fill(0));
           const [netDownHistory, setNetDownHistory] = useState(Array(30).fill(0));
           const [netUpHistory, setNetUpHistory] = useState(Array(30).fill(0));
+          const [netDownSpeed, setNetDownSpeed] = useState(0);
+          const [netUpSpeed, setNetUpSpeed] = useState(0);
           const lastNetStats = useRef({ recv: 0, sent: 0, time: Date.now() });
           
           const [currentWatts, setCurrentWatts] = useState(0);
@@ -820,8 +834,20 @@
                 if (timeDiff > 0 && lastNetStats.current.recv > 0) {
                     const bytesDown = stats.net_recv - lastNetStats.current.recv;
                     const bytesUp = stats.net_sent - lastNetStats.current.sent;
-                    setNetDownHistory(prev => [...prev.slice(1), Math.max(0, (bytesDown * 8) / (1024 * 1024) / timeDiff)]);
-                    setNetUpHistory(prev => [...prev.slice(1), Math.max(0, (bytesUp * 8) / (1024 * 1024) / timeDiff)]);
+                    
+                    // Calc speed in bits/sec
+                    const bitsDown = bytesDown * 8;
+                    const bitsUp = bytesUp * 8;
+                    
+                    const downSpeed = bitsDown / timeDiff;
+                    const upSpeed = bitsUp / timeDiff;
+                    
+                    setNetDownSpeed(downSpeed);
+                    setNetUpSpeed(upSpeed);
+                    
+                    // History in Mbps for sparkline
+                    setNetDownHistory(prev => [...prev.slice(1), downSpeed / (1024 * 1024)]);
+                    setNetUpHistory(prev => [...prev.slice(1), upSpeed / (1024 * 1024)]);
                 }
                 lastNetStats.current = { recv: stats.net_recv, sent: stats.net_sent, time: now };
 
@@ -843,8 +869,10 @@
           useEffect(() => { fetchData(); const i = setInterval(fetchData, 2000); return () => clearInterval(i); }, []);
           const getLoadColor = (val) => val > 80 ? "stroke-rose-500 text-rose-500" : val > 50 ? "stroke-amber-400 text-amber-400" : "stroke-teal-400 text-teal-400";
 
-          const costPerKwh = 0.71; 
-          const sessionCost = accumulatedKwh * costPerKwh;
+          const formatSpeed = (speed) => {
+              if (speed < 1024 * 1024) return `${(speed / 1024).toFixed(1)} Kbps`;
+              return `${(speed / (1024 * 1024)).toFixed(1)} Mbps`;
+          };
 
           return (
             <div className="space-y-6 animate-fade-in pb-8">
@@ -870,11 +898,11 @@
                 <GlowCard title="Network Traffic" icon={Wifi} className="col-span-1 md:col-span-2">
                   <div className="grid grid-cols-2 gap-8 h-full w-full px-4">
                     <div>
-                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Down (RX)</span><span className={`text-lg font-mono ${theme.text}`}>{netDownHistory[netDownHistory.length -1].toFixed(1)} Mb/s</span></div>
+                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Down (RX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netDownSpeed)}</span></div>
                       <div className="h-24 w-full bg-gradient-to-b from-emerald-500/5 to-transparent rounded-lg border-b border-emerald-500/20"><Sparkline data={netDownHistory} color="#34d399" height={80} /></div>
                     </div>
                     <div>
-                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Up (TX)</span><span className={`text-lg font-mono ${theme.text}`}>{netUpHistory[netUpHistory.length -1].toFixed(1)} Mb/s</span></div>
+                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Up (TX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netUpSpeed)}</span></div>
                       <div className="h-24 w-full bg-gradient-to-b from-indigo-500/5 to-transparent rounded-lg border-b border-indigo-500/20"><Sparkline data={netUpHistory} color="#818cf8" height={80} /></div>
                     </div>
                   </div>
@@ -1445,14 +1473,62 @@
           return (
             <div className={`flex h-screen w-full ${theme.bg} transition-colors duration-700 font-sans overflow-hidden relative`}>
               <ParticleBackground theme={theme} />
+              
+              {/* Sidebar */}
               <aside className={`fixed md:relative top-0 left-0 h-full w-64 ${theme.sidebar} backdrop-blur-2xl transition-transform duration-300 ease-out z-40 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} pt-16 md:pt-0`}>
-                <div className="p-8 mb-2 hidden md:block"><div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20"><Zap size={18} fill="currentColor"/></div>AURORA</div><div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div></div>
-                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">{navItems.map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}><item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} /><span className="text-sm tracking-wide">{item.label}</span>{activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}</button>))}</nav>
-                <div className={`p-6 mt-auto`}><button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}><LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/><span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span></button></div>
+                <div className="p-8 mb-2 hidden md:block">
+                    <div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}>
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+                            <Zap size={18} fill="currentColor"/>
+                        </div>
+                        AURORA
+                    </div>
+                    <div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div>
+                </div>
+
+                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">
+                  {navItems.map(item => (
+                    <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}>
+                      <item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                      <span className="text-sm tracking-wide">{item.label}</span>
+                      {activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}
+                    </button>
+                  ))}
+                </nav>
+
+                <div className={`p-6 mt-auto`}>
+                    <button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}>
+                        <LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/>
+                        <span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span>
+                    </button>
+                </div>
               </aside>
-              <div className="md:hidden fixed top-4 left-4 z-50"><button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button></div>
+
+              {/* Mobile Menu Button */}
+              <div className="md:hidden fixed top-4 left-4 z-50">
+                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">
+                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+              </div>
+
+              {/* Main Content */}
               <main className="flex-1 overflow-y-auto p-4 md:p-10 relative scrollbar-thin scrollbar-thumb-slate-700/20 z-10">
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4"><div className="flex flex-col"><h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2></div><div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}><div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div></header>
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+                   {/* Breadcrumb / Title */}
+                   <div className="flex flex-col">
+                       <h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2>
+                   </div>
+
+                   {/* Status Bar */}
+                   <div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}>
+                        <div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div>
+                        <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
+                        <div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div>
+                        <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
+                        <div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                   </div>
+                </header>
+                
                 {activeTab === 'neural' && <NeuralView theme={theme} username={username} />}
                 {activeTab === 'telemetry' && <TelemetryView theme={theme} />}
                 {activeTab === 'health' && <HealthView theme={theme} />}
