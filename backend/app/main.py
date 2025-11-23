@@ -114,3 +114,17 @@ async def metrics():
 @app.get("/")
 async def root():
     return {"status": "Aurora System Online", "version": "Final"}
+
+from fastapi import APIRouter
+# Importera logiken från docker_service.py som du laddade upp
+from docker_service import list_containers, get_templates, create_container, perform_action
+
+docker_router = APIRouter(prefix="/api/docker", tags=["docker"])
+
+@docker_router.get("/containers")
+def get_docker_containers():
+    return list_containers()
+
+@docker_router.get("/templates")
+def get_docker_templates():
+    return get_templates()
