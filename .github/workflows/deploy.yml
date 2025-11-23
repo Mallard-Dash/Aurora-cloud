@@ -1,68 +1,42 @@
-name: Deploy Aurora
+name: Deploy Aurora (Self-Hosted)
 
+# Körs när du pushar till main
 on:
   push:
     branches: [ main ]
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # VIKTIGT: Detta säger åt GitHub att använda DIN server, inte molnet
+    runs-on: self-hosted
+
     steps:
+    # 1. Hämta koden från GitHub till runner-mappen på din server
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Debug-steg för att se om hemligheter är laddade (skriver inte ut värdet)
-    - name: Check Secrets
+    # 2. Flytta filerna lokalt på servern (inga nätverksproblem!)
+    - name: Deploy Files Locally
       run: |
-        if [ -z "${{ secrets.HOST }}" ]; then
-          echo "Error: HOST secret is missing or empty!"
-          exit 1
-        else
-          echo "HOST secret is present."
-        fi
-
-    # 1. Kopiera filer till servern (till en temporär mapp)
-    - name: Copy files to Server
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.username }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: 22
-        # Kopiera mapparna frontend och backend
-        source: "frontend/,backend/"
-        target: "/home/aurora/deploy_temp"
-
-    # 2. Logga in och flytta filerna till rätt plats + starta om
-    - name: Install & Restart
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.username }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: 22
-        script: |
-          echo "🚀 Starting deployment logic..."
-          
-          # Flytta Frontend (Webbfiler)
-          # Använder rsync för att bara uppdatera ändrade filer
-          # sudo behövs om aurora inte äger /var/www, annars ta bort sudo
-          sudo rsync -av --delete /home/aurora/deploy_temp/frontend/ /var/www/aurora/
-          
-          # Flytta Backend (Applikationskod)
-          # Vi raderar INTE .env eller .venv, så --delete används inte här
-          rsync -av /home/aurora/deploy_temp/backend/ /home/aurora/aurora/backend/
-          
-          # Installera dependencies
-          echo "📦 Installing dependencies..."
-          source /home/aurora/aurora/.venv/bin/activate
-          pip install -r /home/aurora/aurora/backend/requirements.txt
-          
-          # Städa temp-filer
-          rm -rf /home/aurora/deploy_temp
-          
-          # Starta om tjänsten
-          echo "🔄 Restarting Service..."
-          sudo systemctl restart aurora
-          
-          echo "✅ Deployment Complete!"
+        echo "🚀 Starting Local Deployment..."
+        
+        # Flytta Frontend till webb-mappen
+        # Vi använder rsync för att det är snabbt och säkert
+        echo "📂 Updating Frontend..."
+        sudo rsync -av --delete ./frontend/ /var/www/aurora/
+        
+        # Flytta Backend till app-mappen
+        echo "🐍 Updating Backend..."
+        # Vi exkluderar filer vi inte vill skriva över av misstag
+        rsync -av --exclude='AURORA_CLOUD' --exclude='.venv' --exclude='__pycache__' ./backend/ /home/aurora/aurora/backend/
+        
+        # Installera nya python-paket om det behövs
+        echo "📦 Checking dependencies..."
+        source /home/aurora/aurora/.venv/bin/activate
+        pip install -r ./backend/requirements.txt
+        
+        # Starta om tjänsten
+        echo "🔄 Restarting Aurora Service..."
+        sudo systemctl restart aurora
+        
+        echo "✅ Deployment Successful! Server is updated."
