@@ -4,3 +4,12 @@ __pycache__/
 *.tar.gz
 .DS_Store
 token.txt
+docker_manager/pycache/
+docker_manager/.env
+docker_manager/venv/
+.env
+instance/*.db
+/node_modules
+/dist
+/build
+.vscode

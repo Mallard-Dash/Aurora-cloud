@@ -21,6 +21,7 @@ from .borealis_backend import router as borealis_router
 from .minecraft_backend import router as minecraft_router
 from .system_backend import router as system_router
 from .storage_backend import router as storage_router
+from .health_backend import router as health_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,24 +40,44 @@ app.include_router(borealis_router)
 app.include_router(minecraft_router)
 app.include_router(system_router)
 app.include_router(storage_router)
+app.include_router(health_router)
 
 @app.on_event("startup")
 async def startup_event():
+    """Runs when the server starts. Creates database tables and default users."""
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # Seed default admin if missing
-        ROOT_PW = os.getenv("ROOT_PASSWORD", "admin")
-        ROOT_HASH = get_password_hash(ROOT_PW)
+        # Default password for initialization
+        DEFAULT_PW = "default123"
+        hashed_pw = get_password_hash(DEFAULT_PW)
+
+        # 1. Create Aurora (Admin) - Has all privileges
         if not db.query(User).filter(User.username == "aurora").first():
             logger.info("Creating default admin user: aurora")
-            db.add(User(username="aurora", password_hash=ROOT_HASH, is_admin=True))
+            db.add(User(
+                username="aurora", 
+                email="aurora@aurora-cloud.local",
+                password_hash=hashed_pw, 
+                is_admin=True
+            ))
+        
+        # 2. Create Freyja (Standard user) - No Docker access
+        if not db.query(User).filter(User.username == "freyja").first():
+            logger.info("Creating standard user: freyja")
+            db.add(User(
+                username="freyja", 
+                email="freyja@aurora-cloud.local",
+                password_hash=hashed_pw, 
+                is_admin=False
+            ))
+
         db.commit()
         Path(STORAGE_PATH).mkdir(parents=True, exist_ok=True)
     finally:
         db.close()
 
-# --- AUTH MODELLER ---
+# --- AUTH MODELS ---
 class LoginReq(BaseModel):
     username: str
     password: str
@@ -76,39 +97,39 @@ async def login(req: LoginReq, db: Session = Depends(get_db)):
 
 @app.post("/api/auth/change-password")
 async def change_password(req: ChangePasswordReq, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # 1. Verifiera gamla lösenordet
+    # 1. Verify old password
     if not verify_password(req.old_password, current_user.password_hash):
-        raise HTTPException(status_code=400, detail="Det gamla lösenordet är fel.")
+        raise HTTPException(status_code=400, detail="Old password is incorrect.")
     
-    # 2. Sätt nytt
+    # 2. Set new password
     current_user.password_hash = get_password_hash(req.new_password)
     db.commit()
-    return {"message": "Lösenord uppdaterat"}
+    return {"message": "Password updated"}
 
 @app.get("/api/user/me")
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return {"username": current_user.username, "is_admin": current_user.is_admin}
 
 # --- STORAGE QUOTA ENDPOINT ---
-# Vi lägger den här för enkelhetens skull, eller i storage_backend om du föredrar.
-# Men eftersom storage_backend redan är mountad, lägger vi en hjälpare här som frontend kan anropa om vi vill,
-# ELLER så uppdaterar vi storage_backend. Vi kör en override här för snabb fix.
 @app.get("/api/storage/quota")
 async def get_storage_quota(user: User = Depends(get_current_user)):
     total_size = 0
-    # Räkna storlek rekursivt
+    # Calculate size recursively
     for dirpath, dirnames, filenames in os.walk(STORAGE_PATH):
         for f in filenames:
             fp = os.path.join(dirpath, f)
-            # skip if broken link
             if not os.path.islink(fp):
-                total_size += os.path.getsize(fp)
+                try:
+                    total_size += os.path.getsize(fp)
+                except OSError:
+                    continue
     
-    limit = 30 * 1024 * 1024 * 1024 # 30 GB
+    limit = 30 * 1024 * 1024 * 1024  # 30 GB
+    percent = min(100, (total_size / limit) * 100) if limit else 0
     return {
         "used": total_size,
         "limit": limit,
-        "percent": min(100, (total_size / limit) * 100)
+        "percent": percent
     }
 
 @app.get("/metrics")

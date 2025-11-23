@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  docker-manager:
+    build: .
+    container_name: aurora-docker-manager
+    ports:
+      - "8001:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - SECRET_KEY=supersecretkey123
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+    restart: unless-stopped
