@@ -27,8 +27,8 @@ jobs:
         
         # Flytta Backend till app-mappen
         echo "🐍 Updating Backend..."
-        # Vi exkluderar filer vi inte vill skriva över av misstag
-        rsync -av --exclude='AURORA_CLOUD' --exclude='.venv' --exclude='__pycache__' ./backend/ /home/aurora/aurora/backend/
+        # Lägg till --delete för att rensa bort skräpfiler på servern
+        rsync -av --delete --exclude='AURORA_CLOUD' --exclude='.venv' --exclude='__pycache__' ./backend/ /home/aurora/aurora/backend/
         
         # Installera nya python-paket om det behövs
         echo "📦 Checking dependencies..."
