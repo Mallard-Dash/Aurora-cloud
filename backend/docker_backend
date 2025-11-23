@@ -1,0 +1,112 @@
+import docker
+import logging
+from typing import List, Dict, Optional
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from .dependencies import get_current_user, User
+
+# Skapa router för huvudapplikationen
+router = APIRouter(prefix="/api/docker", tags=["Docker Manager"])
+logger = logging.getLogger(__name__)
+
+# Hårdkodade mallar för enkelhetens skull (slipper extra JSON-fil)
+TEMPLATES = [
+  { "name": "alpine", "image": "alpine:latest", "command": "tail -f /dev/null", "ports": [] },
+  { "name": "nginx", "image": "nginx:latest", "command": None, "ports": [80] },
+  { "name": "redis", "image": "redis:alpine", "command": None, "ports": [6379] },
+  { "name": "python-web", "image": "python:3.9-slim", "command": "python3 -m http.server 8000", "ports": [8000] }
+]
+
+# --- Schemas ---
+class CreateContainerRequest(BaseModel):
+    name: str = Field(..., min_length=3, max_length=63, pattern="^[a-zA-Z0-9][a-zA-Z0-9_.-]*$")
+    template: str
+
+# --- Helpers ---
+def get_client():
+    try:
+        # Använder serverns lokala docker socket
+        return docker.from_env()
+    except Exception as e:
+        logger.error(f"Docker connection failed: {e}")
+        raise HTTPException(status_code=503, detail="Docker Daemon unreachable on host")
+
+def check_admin(user: User):
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Access Denied: Admin clearance required")
+
+# --- Endpoints ---
+
+@router.get("/containers")
+async def list_containers(user: User = Depends(get_current_user)):
+    check_admin(user)
+    try:
+        client = get_client()
+        containers = client.containers.list(all=True)
+        result = []
+        for c in containers:
+            # Hämta första porten om den finns, för visning
+            ports = ", ".join([str(k) for k in c.attrs['NetworkSettings']['Ports'].keys()]) if c.attrs['NetworkSettings']['Ports'] else "-"
+            
+            result.append({
+                "id": c.id,
+                "short_id": c.short_id,
+                "name": c.name,
+                "status": c.status,
+                "image": str(c.image.tags[0]) if c.image.tags else "none",
+                "created": c.attrs['Created'],
+                "ports": ports
+            })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/templates")
+async def get_templates(user: User = Depends(get_current_user)):
+    check_admin(user)
+    return TEMPLATES
+
+@router.post("/create")
+async def create_container(req: CreateContainerRequest, user: User = Depends(get_current_user)):
+    check_admin(user)
+    template = next((t for t in TEMPLATES if t["name"] == req.template), None)
+    if not template:
+        raise HTTPException(status_code=400, detail="Template not found")
+
+    try:
+        client = get_client()
+        # Konvertera portar till formatet docker-py vill ha
+        ports = {f"{p}/tcp": None for p in template.get("ports", []) or []}
+        
+        container = client.containers.run(
+            template["image"],
+            command=template["command"],
+            name=req.name,
+            detach=True,
+            ports=ports
+        )
+        return {"message": "Container created", "id": container.id}
+    except docker.errors.APIError as e:
+        raise HTTPException(status_code=409, detail=f"Docker Error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/{container_id}/{action}")
+async def container_action(container_id: str, action: str, user: User = Depends(get_current_user)):
+    check_admin(user)
+    client = get_client()
+    try:
+        container = client.containers.get(container_id)
+        if action == "start":
+            container.start()
+        elif action == "stop":
+            container.stop()
+        elif action == "delete":
+            container.remove(force=True)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid action")
+        return {"message": f"Action {action} success"}
+    except docker.errors.NotFound:
+        raise HTTPException(status_code=404, detail="Container not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

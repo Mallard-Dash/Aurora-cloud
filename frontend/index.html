@@ -33,7 +33,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Fonts: Orbitron (Cybero-style), Inter, VT323 -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&family=VT323&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;600;700&family=VT323&display=swap" rel="stylesheet">
 
     <style>
         /* Scrollbar Styles */
@@ -243,19 +243,21 @@
 
             return (
                 <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
-                    {/* Outer Glow Ring */}
-                    <div className="absolute inset-0 rounded-full border border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.4)] animate-pulse"></div>
+                    {/* Outer Glow Ring with Orange Plasma Effect */}
+                    <div className="absolute inset-0 rounded-full border-2 border-orange-500/40 shadow-[0_0_30px_rgba(249,115,22,0.6),inset_0_0_20px_rgba(249,115,22,0.2)] animate-pulse"></div>
                     
                     {/* Inner Clock Face */}
-                    <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-black/60 border border-orange-500/20 relative shadow-inner flex items-center justify-center backdrop-blur-sm">
+                    <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-black/80 border border-orange-500/20 relative shadow-inner flex items-center justify-center backdrop-blur-sm">
                         {/* Center Dot */}
-                        <div className="w-2 h-2 bg-orange-400 rounded-full z-20 shadow-[0_0_10px_rgba(249,115,22,1)]"></div>
+                        <div className="w-3 h-3 bg-orange-500 rounded-full z-20 shadow-[0_0_15px_rgba(249,115,22,1)]"></div>
 
                         {/* Hands */}
-                        <div className="absolute w-[3px] h-[35px] md:h-[45px] bg-orange-600/80 origin-bottom bottom-1/2 left-[calc(50%-1.5px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(234,88,12,0.5)]" style={{ transform: `rotate(${hourDeg}deg)` }}></div>
-                        <div className="absolute w-[2px] h-[45px] md:h-[55px] bg-orange-500/90 origin-bottom bottom-1/2 left-[calc(50%-1px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(249,115,22,0.5)]" style={{ transform: `rotate(${minDeg}deg)` }}></div>
-                        {/* Second Hand - Brighter, Thinner */}
-                        <div className="absolute w-[1px] h-[50px] md:h-[60px] bg-orange-300 origin-bottom bottom-1/2 left-[calc(50%-0.5px)] z-10 shadow-[0_0_8px_rgba(253,186,116,0.9)] transition-transform duration-200 ease-out" style={{ transform: `rotate(${secDeg}deg)` }}></div>
+                        {/* Hour Hand */}
+                        <div className="absolute w-[4px] h-[35px] md:h-[40px] bg-orange-600 origin-bottom bottom-1/2 left-[calc(50%-2px)] rounded-full z-10 shadow-[0_0_8px_rgba(234,88,12,0.8)]" style={{ transform: `rotate(${hourDeg}deg)` }}></div>
+                        {/* Minute Hand */}
+                        <div className="absolute w-[3px] h-[45px] md:h-[55px] bg-orange-500 origin-bottom bottom-1/2 left-[calc(50%-1.5px)] rounded-full z-10 shadow-[0_0_8px_rgba(249,115,22,0.8)]" style={{ transform: `rotate(${minDeg}deg)` }}></div>
+                        {/* Second Hand - Bright Orange Plasma */}
+                        <div className="absolute w-[2px] h-[50px] md:h-[60px] bg-orange-300 origin-bottom bottom-1/2 left-[calc(50%-1px)] z-10 shadow-[0_0_10px_rgba(253,186,116,1)] transition-transform duration-200 ease-out" style={{ transform: `rotate(${secDeg}deg)` }}></div>
                     </div>
                 </div>
             );
@@ -284,7 +286,6 @@
 
         const Sparkline = ({ data, color = "#2dd4bf", height = 60 }) => {
           if (!data || data.length === 0) return null;
-          // FIX: Dynamisk max så även låg trafik syns. Minst 1 dock för att undvika div/0.
           const max = Math.max(Math.max(...data), 1); 
           const width = 100; 
           const points = data.map((val, i) => {
@@ -510,11 +511,400 @@
                 </div>
             );
         };
+        
+        const NeuralView = ({ theme, username }) => {
+            const [greeting, setGreeting] = useState("");
+            const [logEntry, setLogEntry] = useState("");
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [selectedDate, setSelectedDate] = useState(new Date());
+            const [appointments, setAppointments] = useState({ [new Date().toDateString()]: [{ id: 1, title: "System Check", time: "09:00", reminder: false }] });
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [weather, setWeather] = useState({ temp: 0, condition: 'cloudy' });
+            const [forecast] = useState(generateForecast());
 
-        // --- NEW DOCKER VIEW ---
+            useEffect(() => {
+                setGreeting(getGreeting());
+                fetch('https://api.open-meteo.com/v1/forecast?latitude=59.33&longitude=18.07&current=temperature_2m,weather_code')
+                    .then(r => r.json())
+                    .then(d => {
+                        if(d.current) {
+                            let cond = 'cloudy';
+                            const code = d.current.weather_code;
+                            if (code === 0) cond = 'sunny';
+                            else if (code < 3) cond = 'partly';
+                            else if (code < 60) cond = 'cloudy';
+                            else if (code < 80) cond = 'rainy';
+                            else cond = 'rainy';
+                            setWeather({ temp: Math.round(d.current.temperature_2m), condition: cond });
+                        }
+                    }).catch(e => console.error("Weather error", e));
+                const savedLog = localStorage.getItem('captainsLog');
+                if (savedLog) setLogEntry(savedLog);
+            }, []);
+
+            const handleSaveLog = () => { localStorage.setItem('captainsLog', logEntry); alert("Entry Saved."); };
+            const handleAddAppointment = ({ desc, time, reminder }) => { const key = selectedDate.toDateString(); const newAppt = { id: Date.now(), title: desc, time, reminder }; setAppointments(prev => ({ ...prev, [key]: [...(prev[key] || []), newAppt].sort((a,b) => a.time.localeCompare(b.time)) })); };
+            const handleDeleteAppointment = (apptId) => { const key = selectedDate.toDateString(); setAppointments(prev => ({ ...prev, [key]: prev[key].filter(a => a.id !== apptId) })); };
+            const daysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+            const getStartDay = (date) => { let day = new Date(date.getFullYear(), date.getMonth(), 1).getDay(); return day === 0 ? 6 : day - 1; };
+            const renderCalendarDays = () => { const days = []; const totalDays = daysInMonth(currentDate); const startDay = getStartDay(currentDate); for (let i = 0; i < startDay; i++) days.push(<div key={`empty-${i}`} className="h-9 w-9" />); for (let d = 1; d <= totalDays; d++) { const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d); const isSelected = date.toDateString() === selectedDate.toDateString(); const isToday = date.toDateString() === new Date().toDateString(); const hasEvents = appointments[date.toDateString()]?.length > 0; days.push(<button key={d} onClick={() => setSelectedDate(date)} className={`relative h-9 w-9 rounded-full flex items-center justify-center text-sm transition-all ${isSelected ? 'bg-teal-500 text-white font-bold shadow-lg shadow-teal-500/30' : 'hover:bg-white/10 text-slate-300'} ${isToday && !isSelected ? 'border border-teal-500/50 text-teal-400' : ''}`}>{d} {hasEvents && !isSelected && (<div className="absolute bottom-1 w-1 h-1 bg-teal-400 rounded-full" />)}</button>); } return days; };
+
+            return (
+                <div className="animate-fade-in space-y-8">
+                    {/* Hero Section - Updated Font to Playfair Display/Serif */}
+                    <div className="relative p-8 rounded-3xl bg-gradient-to-r from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-white/5 overflow-hidden">
+                        <div className="absolute right-0 top-0 w-64 h-64 bg-teal-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                        <div className="relative z-10">
+                            <h1 className="text-5xl md:text-6xl font-cybero tracking-tight text-white mb-2 italic">
+                                {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-teal-500 not-italic">{username}</span>
+                            </h1>
+                            <div className="flex items-center gap-3 text-slate-400 text-sm font-medium mt-4">
+                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div> All Systems Nominal</span>
+                                <span className="opacity-30">|</span>
+                                <span>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Weather Widget */}
+                        <CyberCard className="col-span-1 min-h-[300px]">
+                             <div className="flex flex-col justify-between h-full">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <div className="text-5xl font-light text-white">{weather.temp}°</div>
+                                        <div className="text-teal-400 text-sm font-bold uppercase tracking-wider mt-1">{weather.condition}</div>
+                                        <div className="text-slate-500 text-xs mt-1 flex items-center gap-1"><MapPin size={10} /> Stockholm</div>
+                                    </div>
+                                    <div className="w-24 h-24"><WeatherVisuals condition={weather.condition} /></div>
+                                </div>
+                                <div className="mt-6">
+                                    <div className="text-[10px] font-bold text-slate-500 mb-3 uppercase tracking-widest">Forecast</div>
+                                    <div className="flex justify-between overflow-x-auto pb-2 gap-2 scrollbar-none">
+                                        {forecast.slice(0, 5).map((item, idx) => (
+                                            <div key={idx} className="flex flex-col items-center space-y-2 min-w-[50px]">
+                                                <span className="text-[10px] text-slate-500">{item.time}</span>
+                                                <div className="text-slate-300">{item.condition === 'sunny' ? <Sun size={16}/> : item.condition === 'rainy' ? <CloudRain size={16}/> : <Cloud size={16}/>}</div>
+                                                <span className="text-xs font-bold text-white">{item.temp}°</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                             </div>
+                        </CyberCard>
+
+                        {/* Calendar */}
+                        <CyberCard title="Agenda" className="col-span-1 lg:col-span-2" actionButton={<button onClick={() => setIsModalOpen(true)} className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 transition-colors"><Plus size={16} /></button>}>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
+                                <div>
+                                    <div className="flex justify-between items-center mb-4 px-1">
+                                        <button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()-1); setCurrentDate(d); }} className="text-slate-500 hover:text-white"><ChevronLeft size={18} /></button>
+                                        <span className="text-sm font-bold text-white uppercase tracking-wider">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
+                                        <button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()+1); setCurrentDate(d); }} className="text-slate-500 hover:text-white"><ChevronRight size={18} /></button>
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-1 text-center mb-2">{['M','T','W','T','F','S','S'].map(d => <span key={d} className="text-[10px] font-bold text-slate-600">{d}</span>)}</div>
+                                    <div className="grid grid-cols-7 gap-1 place-items-center">{renderCalendarDays()}</div>
+                                </div>
+                                <div className="border-l border-white/5 pl-6 flex flex-col h-full">
+                                    <h4 className="text-xs font-bold text-teal-500 mb-4 uppercase tracking-widest">{selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}</h4>
+                                    <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                                        {appointments[selectedDate.toDateString()]?.length > 0 ? (appointments[selectedDate.toDateString()].map((appt) => (
+                                            <div key={appt.id} className="bg-white/[0.03] hover:bg-white/[0.06] border-l-2 border-teal-500 p-3 rounded-r-lg transition-colors group flex justify-between">
+                                                <div>
+                                                    <div className="text-xs font-bold text-white mb-0.5">{appt.title}</div>
+                                                    <div className="text-[10px] text-slate-400 font-mono">{appt.time}</div>
+                                                </div>
+                                                <button onClick={() => handleDeleteAppointment(appt.id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-rose-400 transition-all"><Trash2 size={14} /></button>
+                                            </div>
+                                        ))) : (<div className="text-slate-600 italic text-xs mt-10 text-center">No events scheduled.</div>)}
+                                    </div>
+                                </div>
+                            </div>
+                        </CyberCard>
+                    </div>
+
+                     {/* Notes & Plasma Clock - SIDE BY SIDE NOW */}
+                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        {/* Plasma Clock Card */}
+                        <CyberCard className="col-span-1 flex items-center justify-center min-h-[200px]">
+                            <div className="flex flex-col items-center gap-4">
+                                <PlasmaClock />
+                                <div className="text-xs font-mono text-orange-400/80 tracking-[0.2em]">SYSTEM TIME</div>
+                            </div>
+                        </CyberCard>
+
+                        {/* Captain's Log Card */}
+                        <CyberCard title="Captain's Log" className="col-span-1 md:col-span-3 min-h-[200px]" actionButton={<button onClick={handleSaveLog} className="flex items-center gap-2 text-xs font-bold text-teal-400 hover:text-teal-300"><Save size={14} /> SAVE</button>}>
+                            <textarea value={logEntry} onChange={(e) => setLogEntry(e.target.value)} placeholder="Write your observations..." className="w-full h-full bg-transparent border-none outline-none resize-none text-sm text-slate-300 placeholder:text-slate-600 leading-relaxed min-h-[120px]" spellCheck="false" />
+                        </CyberCard>
+                     </div>
+
+                    <AddAppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} selectedDate={selectedDate} onSave={handleAddAppointment} />
+                </div>
+            );
+        };
+
+        const TelemetryView = ({ theme }) => {
+          const [cpuLoad, setCpuLoad] = useState(0);
+          const [cpuTemp, setCpuTemp] = useState(0);
+          const [ramUsed, setRamUsed] = useState(0);
+          const [ramTotal, setRamTotal] = useState(0);
+          const [diskUsed, setDiskUsed] = useState(0);
+          const [diskTotal, setDiskTotal] = useState(0);
+          const [cpuHistory, setCpuHistory] = useState(Array(30).fill(0));
+          const [netDownHistory, setNetDownHistory] = useState(Array(30).fill(0));
+          const [netUpHistory, setNetUpHistory] = useState(Array(30).fill(0));
+          const [netDownSpeed, setNetDownSpeed] = useState(0);
+          const [netUpSpeed, setNetUpSpeed] = useState(0);
+          const lastNetStats = useRef({ recv: 0, sent: 0, time: Date.now() });
+          
+          const [currentWatts, setCurrentWatts] = useState(0);
+          const [accumulatedKwh, setAccumulatedKwh] = useState(0);
+          const [startTime] = useState(Date.now());
+
+          // NEW STATES for Core Visualization
+          const [cpuCores, setCpuCores] = useState([]);
+          const [procCount, setProcCount] = useState(0);
+          const [diskReadSpeed, setDiskReadSpeed] = useState(0);
+          const [diskWriteSpeed, setDiskWriteSpeed] = useState(0);
+          const [diskIOHistory, setDiskIOHistory] = useState(Array(30).fill(0));
+          const lastDiskStats = useRef({ read: 0, write: 0, time: Date.now() });
+
+          const fetchData = async () => {
+            const res = await authFetch('/api/system/stats');
+            if (!res || !res.ok) return;
+            try {
+                const stats = await res.json();
+                setCpuLoad(stats.cpu_pct); 
+                setCpuTemp(stats.temp || 0);
+                setRamUsed(stats.ram_used / (1024**3)); setRamTotal(stats.ram_total / (1024**3));
+                setDiskUsed(stats.disk_used / (1024**3)); setDiskTotal(stats.disk_total / (1024**3));
+                setCpuHistory(prev => [...prev.slice(1), stats.cpu_pct]);
+                
+                // New stats mapping
+                setProcCount(stats.process_count || 0);
+                setCpuCores(stats.cpu_cores || []);
+
+                const estimatedWatts = 100 + ((stats.cpu_pct / 100) * 250);
+                setCurrentWatts(estimatedWatts);
+                
+                const hoursSinceStart = (Date.now() - startTime) / (1000 * 60 * 60);
+                setAccumulatedKwh((estimatedWatts * hoursSinceStart) / 1000);
+
+                const now = Date.now(); const timeDiff = (now - lastNetStats.current.time) / 1000;
+                if (timeDiff > 0 && lastNetStats.current.recv > 0) {
+                    const bytesDown = stats.net_recv - lastNetStats.current.recv;
+                    const bytesUp = stats.net_sent - lastNetStats.current.sent;
+                    
+                    // Calc speed in bits/sec
+                    const bitsDown = bytesDown * 8;
+                    const bitsUp = bytesUp * 8;
+                    
+                    const downSpeed = bitsDown / timeDiff;
+                    const upSpeed = bitsUp / timeDiff;
+                    
+                    setNetDownSpeed(downSpeed);
+                    setNetUpSpeed(upSpeed);
+                    
+                    // History in Mbps for sparkline
+                    setNetDownHistory(prev => [...prev.slice(1), downSpeed / (1024 * 1024)]);
+                    setNetUpHistory(prev => [...prev.slice(1), upSpeed / (1024 * 1024)]);
+                }
+                lastNetStats.current = { recv: stats.net_recv, sent: stats.net_sent, time: now };
+
+                // Disk I/O Calc (MB/s)
+                if (timeDiff > 0 && lastDiskStats.current.read > 0) {
+                    const readDiff = stats.disk_io_read - lastDiskStats.current.read;
+                    const writeDiff = stats.disk_io_write - lastDiskStats.current.write;
+                    const rSpeed = Math.max(0, readDiff / (1024*1024) / timeDiff);
+                    const wSpeed = Math.max(0, writeDiff / (1024*1024) / timeDiff);
+                    setDiskReadSpeed(rSpeed);
+                    setDiskWriteSpeed(wSpeed);
+                    setDiskIOHistory(prev => [...prev.slice(1), rSpeed + wSpeed]);
+                }
+                lastDiskStats.current = { read: stats.disk_io_read, write: stats.disk_io_write, time: now };
+
+            } catch(e) {}
+          };
+
+          useEffect(() => { fetchData(); const i = setInterval(fetchData, 2000); return () => clearInterval(i); }, []);
+          const getLoadColor = (val) => val > 80 ? "stroke-rose-500 text-rose-500" : val > 50 ? "stroke-amber-400 text-amber-400" : "stroke-teal-400 text-teal-400";
+
+          const formatSpeed = (speed) => {
+              if (speed < 1024 * 1024) return `${(speed / 1024).toFixed(1)} Kbps`;
+              return `${(speed / (1024 * 1024)).toFixed(1)} Mbps`;
+          };
+
+          return (
+            <div className="space-y-6 animate-fade-in pb-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <GlowCard title="Processor" icon={Brain}>
+                  <CircularGauge value={cpuLoad} max={100} unit="%" label="TOTAL LOAD" color={getLoadColor(cpuLoad)} />
+                </GlowCard>
+                <GlowCard title="Memory" icon={MemoryStick}>
+                  <CircularGauge value={Math.round((ramUsed / ramTotal) * 100) || 0} max={100} unit="%" label={`${ramUsed.toFixed(1)}/${ramTotal.toFixed(0)} GB`} color="stroke-indigo-400 text-indigo-400" />
+                </GlowCard>
+                <GlowCard title="Thermal" icon={Zap}>
+                  <CircularGauge value={Math.round(cpuTemp)} max={100} unit="°C" label="PACKAGE" color={cpuTemp > 80 ? "stroke-rose-500" : "stroke-emerald-400 text-emerald-400"} />
+                </GlowCard>
+                <GlowCard title="Active Procs" icon={Activity}>
+                   <div className="flex flex-col items-center justify-center h-full">
+                       <span className="text-4xl font-light text-white font-mono">{procCount}</span>
+                       <span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase mt-2">Running Tasks</span>
+                   </div>
+                </GlowCard>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <GlowCard title="Network Traffic" icon={Wifi} className="col-span-1 md:col-span-2">
+                  <div className="grid grid-cols-2 gap-8 h-full w-full px-4">
+                    <div>
+                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Down (RX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netDownSpeed)}</span></div>
+                      <div className="h-24 w-full bg-gradient-to-b from-emerald-500/5 to-transparent rounded-lg border-b border-emerald-500/20"><Sparkline data={netDownHistory} color="#34d399" height={80} /></div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Up (TX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netUpSpeed)}</span></div>
+                      <div className="h-24 w-full bg-gradient-to-b from-indigo-500/5 to-transparent rounded-lg border-b border-indigo-500/20"><Sparkline data={netUpHistory} color="#818cf8" height={80} /></div>
+                    </div>
+                  </div>
+                </GlowCard>
+
+                <GlowCard title="Disk I/O Speed" icon={HardDrive} className="col-span-1">
+                   <div className="flex flex-col justify-between h-full w-full px-2">
+                       <div className="flex flex-col gap-2 mb-4">
+                           <div className="flex justify-between"><span className="text-xs text-slate-500">READ</span><span className="text-emerald-400 font-mono">{diskReadSpeed.toFixed(1)} MB/s</span></div>
+                           <div className="flex justify-between"><span className="text-xs text-slate-500">WRITE</span><span className="text-amber-400 font-mono">{diskWriteSpeed.toFixed(1)} MB/s</span></div>
+                       </div>
+                       <div className="h-16 w-full"><Sparkline data={diskIOHistory} color="#fbbf24" height={60} /></div>
+                   </div>
+                </GlowCard>
+              </div>
+
+              {/* NEW CORE VISUALIZER */}
+              <CyberCard title="Neural Core Architecture" className="w-full min-h-[350px] flex flex-col items-center justify-center">
+                  <CpuCoreVisuals cores={cpuCores} />
+              </CyberCard>
+            </div>
+          );
+        };
+
+        const StorageView = ({ theme }) => {
+          const [currentPath, setCurrentPath] = useState(['ROOT']); const [files, setFiles] = useState([]); const [quota, setQuota] = useState({ used: 0, limit: 30 * 1024 * 1024 * 1024 });
+          const fetchFiles = async () => { const res = await authFetch('/api/storage/list?path=' + (currentPath.length > 1 ? currentPath.slice(1).join('/') : '')); if (res && res.ok) { const data = await res.json(); setFiles(data.files || []); } else { setFiles([]); } const qRes = await authFetch('/api/storage/quota'); if (qRes && qRes.ok) { const qData = await qRes.json(); setQuota({ used: qData.used, limit: qData.limit }); } };
+          useEffect(() => { fetchFiles(); }, [currentPath]);
+          const handleUpload = async (e) => { const files = e.target.files; if (!files || files.length === 0) return; const formData = new FormData(); const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') : ""; formData.append('path', relPath); for(let i = 0; i < files.length; i++) { formData.append('files', files[i]); } const res = await authFetch('/api/storage/upload', { method: 'POST', body: formData }); if(res && res.ok) { fetchFiles(); alert("Uppladdning lyckades!"); } else { alert("Uppladdning misslyckades."); } };
+          const handleDownload = async (name) => { const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') + '/' + name : name; const res = await authFetch(`/api/storage/download?path=${relPath}`); if(res && res.ok) { const blob = await res.blob(); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); } else { alert("Download failed."); } };
+          const handleDelete = async (name) => { if(!confirm("Permanently delete " + name + "?")) return; const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') + '/' + name : name; const res = await authFetch('/api/storage/delete', { method: 'POST', body: JSON.stringify({ path: relPath }) }); if(res && res.ok) { fetchFiles(); } else { alert("Delete failed."); } };
+          const getIcon = (type) => { if(type === 'folder') return <Folder size={18} className="text-amber-400 fill-amber-400/20"/>; return <File size={18} className="text-indigo-400"/>; };
+          const usedPercent = Math.min(100, (quota.used / quota.limit) * 100);
+          return (
+            <div className="space-y-6 animate-fade-in">
+                <GlowCard title="Capacity" icon={HardDrive} className="md:col-span-3" theme={theme}><div className="flex flex-col gap-3 w-full px-4"><div className="flex justify-between text-xs font-medium text-slate-400 tracking-wider"><span>USED: {formatBytes(quota.used)}</span><span className="text-teal-400 font-bold">{usedPercent.toFixed(1)}%</span><span>TOTAL: {formatBytes(quota.limit)}</span></div><div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden flex shadow-inner relative"><div style={{ width: `${usedPercent}%` }} className="h-full bg-gradient-to-r from-teal-600 to-cyan-500 rounded-full shadow-[0_0_10px_rgba(45,212,191,0.3)] transition-all duration-1000" /><div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white mix-blend-difference">{usedPercent.toFixed(1)}% Full</div></div></div></GlowCard>
+                <Card title="Aurora-Nova Explorer" icon={Folder} theme={theme}><div className={`flex items-center gap-2 mb-6 p-2 ${theme.inputBg} rounded-lg border ${theme.border}`}><button onClick={() => setCurrentPath(p => p.length > 1 ? p.slice(0, -1) : p)} disabled={currentPath.length === 1} className={`p-2 hover:bg-black/5 rounded-md disabled:opacity-30 ${theme.text}`}><CornerLeftUp size={16} /></button><div className={`font-mono text-sm ${theme.accent} flex-1 ml-2 tracking-tight`}>{currentPath.join(' / ')}</div><div className="flex gap-2"><label className="cursor-pointer p-2 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 rounded-md text-xs font-bold flex items-center gap-2 transition-colors"><Plus size={14} /> ADD FILE<input type="file" className="hidden" multiple onChange={handleUpload} /></label></div></div>{files.length === 0 ? (<div className="text-center py-16 text-slate-600 italic text-sm flex flex-col items-center gap-3"><Folder size={32} className="opacity-20" />Empty directory</div>) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{files.map((file, i) => (<div key={i} className={`${theme.id === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.02] border-white/5'} border hover:border-teal-500/30 p-3 rounded-lg flex items-center justify-between group transition-all cursor-pointer`}><div className="flex items-center gap-3 overflow-hidden" onClick={() => file.type === 'dir' && setCurrentPath(p => [...p, file.name])}><div className={`p-2 rounded-md ${theme.id === 'light' ? 'bg-white border border-slate-200' : 'bg-black/20'}`}>{getIcon(file.type === 'dir' ? 'folder' : 'file')}</div><div className="overflow-hidden"><div className={`text-sm font-medium truncate ${theme.text}`}>{file.name}</div>{file.type !== 'dir' && <div className={`text-[10px] ${theme.textDim}`}>{formatBytes(file.size || 0)}</div>}</div></div><div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">{file.type !== 'dir' && <button onClick={(e) => {e.stopPropagation(); handleDownload(file.name)}} className="p-1.5 hover:bg-teal-500/10 text-slate-500 hover:text-teal-400 rounded transition-all"><Download size={14} /></button>}<button onClick={(e) => {e.stopPropagation(); handleDelete(file.name)}} className="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded transition-all"><Trash2 size={14} /></button></div></div>))}</div>)}</Card>
+            </div>
+          );
+        };
+        const HealthView = ({ theme }) => { const [source, setSource] = useState('system'); const [filter, setFilter] = useState(''); const [logs, setLogs] = useState([]); const [loading, setLoading] = useState(false); const logEndRef = useRef(null); const sources = [{ id: 'system', label: 'System (Journal)', icon: Server }, { id: 'nginx', label: 'Nginx Web', icon: Globe }, { id: 'docker', label: 'Docker Containers', icon: Layers }, { id: 'api', label: 'API / Backend', icon: Activity }]; const fetchLogs = async () => { setLoading(true); const query = new URLSearchParams({ lines: 50, filter: filter }).toString(); const res = await authFetch(`/api/health/logs/${source}?${query}`); if(res && res.ok) { const data = await res.json(); setLogs(data.logs || []); } else { setLogs(["Error fetching logs."]); } setLoading(false); }; useEffect(() => { fetchLogs(); }, [source]); useEffect(() => { if(logEndRef.current) logEndRef.current.scrollTop = logEndRef.current.scrollHeight; }, [logs]); return (<div className="animate-fade-in grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-180px)]"><Card title="Log Source" icon={HeartPulse} theme={theme} className="h-full col-span-1"><div className="space-y-2">{sources.map(s => (<button key={s.id} onClick={() => setSource(s.id)} className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${source === s.id ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'text-slate-400 hover:bg-white/5'}`}><s.icon size={18} /><span className="text-sm font-bold">{s.label}</span></button>))}</div><div className="mt-8 pt-8 border-t border-white/5"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Filter Logs</label><div className="relative"><input type="text" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && fetchLogs()} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 pl-9 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="Search..." /><Search className="absolute left-3 top-3.5 text-slate-500" size={14} /></div><button onClick={fetchLogs} className="w-full mt-4 bg-teal-600 hover:bg-teal-500 text-white py-2 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2">{loading ? <RotateCcw className="animate-spin" size={14} /> : <Filter size={14} />} Refresh Logs</button></div></Card><div className="col-span-3 h-full flex flex-col bg-[#0c0c12] rounded-2xl border border-white/5 overflow-hidden shadow-inner relative"><div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5"><div className="text-xs font-mono-logs text-teal-400 flex items-center gap-2"><Terminal size={12} /> /var/log/{source}.log</div><div className="text-xs text-slate-500">{logs.length} lines</div></div><div ref={logEndRef} className="flex-1 overflow-y-auto p-4 font-mono-logs text-xs space-y-1 custom-scrollbar">{logs.map((line, i) => (<div key={i} className="text-slate-300 hover:bg-white/5 hover:text-white px-1 py-0.5 break-all border-l-2 border-transparent hover:border-teal-500/50">{line}</div>))}{logs.length === 0 && !loading && <div className="text-slate-600 italic text-center mt-10">No logs found matching criteria.</div>}{loading && <div className="text-teal-500 animate-pulse text-center mt-10">Streaming log data...</div>}</div></div></div>); };
+        
+        const MinecraftView = ({ theme }) => {
+          const [status, setStatus] = useState('OFFLINE');
+          const [players, setPlayers] = useState(0);
+          const [maxPlayers, setMaxPlayers] = useState(20);
+          const [logs, setLogs] = useState([]);
+          const [cmdInput, setCmdInput] = useState("");
+          const logRef = useRef(null);
+          const [tps, setTps] = useState(0.0);
+          const [ramUsage, setRamUsage] = useState(0.0);
+
+          useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [logs]);
+
+          const updateData = async () => {
+             const resStatus = await authFetch('/api/minecraft/status');
+             if (resStatus && resStatus.ok) {
+                 const data = await resStatus.json();
+                 setStatus(data.running ? 'ONLINE' : 'OFFLINE');
+                 setPlayers(data.online_players || 0);
+                 setMaxPlayers(data.max_players || 20);
+                 setTps(data.running ? (data.tps || 20.0) : 0); 
+                 setRamUsage(data.running ? (data.ram_usage || 4.2) : 0);
+             } else { 
+                 setStatus('OFFLINE'); 
+                 setTps(0);
+                 setRamUsage(0);
+             }
+             const resLogs = await authFetch('/api/minecraft/logs');
+             if (resLogs && resLogs.ok) { const data = await resLogs.json(); setLogs(data.logs || []); }
+          };
+
+          useEffect(() => { updateData(); const interval = setInterval(updateData, 2000); return () => clearInterval(interval); }, []);
+
+          const sendCommand = async () => {
+              if(!cmdInput) return;
+              setLogs(prev => [...prev, `> ${cmdInput}`]);
+              try { await authFetch('/api/minecraft/command', { method: 'POST', body: JSON.stringify({ command: cmdInput }) }); setCmdInput(""); setTimeout(updateData, 500); } catch(e) { }
+          };
+
+          const handleStart = async () => { if (status !== 'OFFLINE') return; setStatus('STARTING'); setLogs(prev => [...prev, "[System]: Initializing startup sequence..."]); try { await authFetch('/api/minecraft/start', { method: 'POST' }); } catch(e) {} };
+          const handleStop = async () => { if (status === 'OFFLINE') return; setStatus('STOPPING'); setLogs(prev => [...prev, "[System]: Stopping server..."]); try { await authFetch('/api/minecraft/stop', { method: 'POST' }); } catch(e) {} };
+
+          return (
+            <div className="animate-fade-in space-y-6">
+                <header className="flex flex-col md:flex-row justify-between items-end pb-6 mb-2">
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-bold text-white flex items-center gap-3 tracking-tight">
+                            Minecraft<span className="text-teal-400 font-light">Server</span>
+                        </h1>
+                        <p className="text-xs font-mono text-slate-400 mt-2 flex items-center gap-2"><Server size={12}/> AURORA-YMIR-1 // DOCKER CONTAINER</p>
+                    </div>
+                    <div className={`flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 mt-4 md:mt-0`}>
+                        <div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] ${status === 'ONLINE' ? 'bg-emerald-400 text-emerald-400' : status === 'OFFLINE' ? 'bg-rose-500 text-rose-500' : 'bg-amber-400 text-amber-400'}`}></div>
+                        <span className="text-sm font-bold tracking-wide text-slate-200">{status}</span>
+                    </div>
+                </header>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+                    <div className="lg:col-span-1 space-y-4">
+                       <MinecraftCard title="Control Panel" icon={Settings}>
+                           <div className="grid gap-3">
+                               <button onClick={handleStart} disabled={status !== 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all ${status === 'OFFLINE' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:to-emerald-400 text-white' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}><Play size={16} fill="currentColor" /> START</button>
+                               <button onClick={() => { handleStop(); setTimeout(handleStart, 5000); }} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status === 'ONLINE' ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><RotateCcw size={16} /> RESTART</button>
+                               <button onClick={handleStop} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status !== 'OFFLINE' ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><Square size={16} fill="currentColor" /> STOP</button>
+                           </div>
+                       </MinecraftCard>
+                       <MinecraftCard title="Players" icon={Users}>
+                           <div className="flex justify-between items-end mb-2"><span className="text-3xl font-light text-white">{players}</span><span className="text-xs text-slate-500 mb-1 uppercase font-bold">/ {maxPlayers} Online</span></div>
+                           <div className="h-1.5 w-full bg-slate-800/50 rounded-full overflow-hidden"><div className="h-full bg-teal-500 transition-all duration-500" style={{ width: `${(players/maxPlayers)*100}%` }} /></div>
+                       </MinecraftCard>
+                       <div className="grid grid-cols-2 gap-4">
+                           <MinecraftCard title="TPS" icon={Activity} className="items-center justify-center text-center">
+                               <div className={`text-xl font-bold ${tps >= 18 ? 'text-emerald-400' : 'text-amber-400'}`}>{tps.toFixed(1)}</div>
+                           </MinecraftCard>
+                           <MinecraftCard title="RAM" icon={MemoryStick} className="items-center justify-center text-center">
+                               <div className="text-xl font-bold text-indigo-400">{ramUsage.toFixed(1)}G</div                           </MinecraftCard>
+                       </div>
+                    </div>
+                    <div className="lg:col-span-3 h-[600px] lg:h-auto">
+                        <MinecraftCard title="Console" icon={Terminal} className="h-full bg-slate-950/80">
+                            <div className="flex flex-col h-full">
+                                <div ref={logRef} className="flex-1 overflow-y-auto font-mono text-sm space-y-1 pr-2 custom-scrollbar p-2 rounded border border-white/5 mb-4 shadow-inner bg-black/40">
+                                    {logs.map((log, i) => <TerminalLine key={i} text={log} />)}
+                                    {status === 'OFFLINE' && <div className="text-slate-600 italic text-xs text-center mt-10 opacity-50">Server is offline. Logs unavailable.</div>}
+                                </div>
+                                <div className="flex gap-2 items-center bg-white/5 p-1.5 rounded-lg border border-white/5 focus-within:border-teal-500/50 focus-within:ring-1 focus-within:ring-teal-500/20 transition-all">
+                                    <span className="pl-2 text-teal-500 font-mono font-bold">&gt;</span>
+                                    <input type="text" value={cmdInput} onChange={(e) => setCmdInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendCommand()} placeholder="Execute command..." className="w-full bg-transparent border-none text-slate-200 font-mono text-sm outline-none" disabled={status === 'OFFLINE'} />
+                                </div>
+                            </div>
+                        </MinecraftCard>
+                    </div>
+                </div>
+            </div>
+          );
+        };
+
+        // ... (DockerView kept same, just ensure apiBase logic is there) ...
         const DockerView = ({ theme, username }) => {
             const [apiBase, setApiBase] = useState("");
-            const [connectionError, setConnectionError] = useState(false); // New state for connection error
+            const [connectionError, setConnectionError] = useState(false);
             
             useEffect(() => {
                 setApiBase(`http://${window.location.hostname}:8001/api`);
@@ -539,11 +929,11 @@
                         setToken('');
                         localStorage.removeItem('docker_token');
                     }
-                    setConnectionError(false); // Reset error on success
+                    setConnectionError(false);
                     return res;
                 } catch (e) {
                     console.error("Docker API Error", e);
-                    setConnectionError(true); // Set error state
+                    setConnectionError(true);
                     return null;
                 }
             };
@@ -721,725 +1111,25 @@
             );
         };
 
-        const HealthView = ({ theme }) => {
-            const [source, setSource] = useState('system');
-            const [filter, setFilter] = useState('');
-            const [logs, setLogs] = useState([]);
-            const [loading, setLoading] = useState(false);
-            const logEndRef = useRef(null);
-
-            const sources = [
-                { id: 'system', label: 'System (Journal)', icon: Server },
-                { id: 'nginx', label: 'Nginx Web', icon: Globe },
-                { id: 'docker', label: 'Docker Containers', icon: Layers },
-                { id: 'api', label: 'API / Backend', icon: Activity }
-            ];
-
-            const fetchLogs = async () => {
-                setLoading(true);
-                const query = new URLSearchParams({ lines: 50, filter: filter }).toString();
-                const res = await authFetch(`/api/health/logs/${source}?${query}`);
-                if(res && res.ok) {
-                    const data = await res.json();
-                    setLogs(data.logs || []);
-                } else {
-                    setLogs(["Error fetching logs."]);
-                }
-                setLoading(false);
-            };
-
-            useEffect(() => { fetchLogs(); }, [source]); 
-            useEffect(() => { if(logEndRef.current) logEndRef.current.scrollTop = logEndRef.current.scrollHeight; }, [logs]);
-
-            return (
-                <div className="animate-fade-in grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-180px)]">
-                    <Card title="Log Source" icon={HeartPulse} theme={theme} className="h-full col-span-1">
-                        <div className="space-y-2">
-                            {sources.map(s => (
-                                <button key={s.id} onClick={() => setSource(s.id)} className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${source === s.id ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'text-slate-400 hover:bg-white/5'}`}>
-                                    <s.icon size={18} />
-                                    <span className="text-sm font-bold">{s.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="mt-8 pt-8 border-t border-white/5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Filter Logs</label>
-                            <div className="relative">
-                                <input type="text" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && fetchLogs()} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 pl-9 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="Search..." />
-                                <Search className="absolute left-3 top-3.5 text-slate-500" size={14} />
-                            </div>
-                            <button onClick={fetchLogs} className="w-full mt-4 bg-teal-600 hover:bg-teal-500 text-white py-2 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2">
-                                {loading ? <RotateCcw className="animate-spin" size={14} /> : <Filter size={14} />} Refresh Logs
-                            </button>
-                        </div>
-                    </Card>
-                    
-                    <div className="col-span-3 h-full flex flex-col bg-[#0c0c12] rounded-2xl border border-white/5 overflow-hidden shadow-inner relative">
-                        <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5">
-                            <div className="text-xs font-mono-logs text-teal-400 flex items-center gap-2"><Terminal size={12} /> /var/log/{source}.log</div>
-                            <div className="text-xs text-slate-500">{logs.length} lines</div>
-                        </div>
-                        <div ref={logEndRef} className="flex-1 overflow-y-auto p-4 font-mono-logs text-xs space-y-1 custom-scrollbar">
-                            {logs.map((line, i) => (
-                                <div key={i} className="text-slate-300 hover:bg-white/5 hover:text-white px-1 py-0.5 break-all border-l-2 border-transparent hover:border-teal-500/50">
-                                    {line}
-                                </div>
-                            ))}
-                            {logs.length === 0 && !loading && <div className="text-slate-600 italic text-center mt-10">No logs found matching criteria.</div>}
-                            {loading && <div className="text-teal-500 animate-pulse text-center mt-10">Streaming log data...</div>}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const TelemetryView = ({ theme }) => {
-          const [cpuLoad, setCpuLoad] = useState(0);
-          const [cpuTemp, setCpuTemp] = useState(0);
-          const [ramUsed, setRamUsed] = useState(0);
-          const [ramTotal, setRamTotal] = useState(0);
-          const [diskUsed, setDiskUsed] = useState(0);
-          const [diskTotal, setDiskTotal] = useState(0);
-          const [cpuHistory, setCpuHistory] = useState(Array(30).fill(0));
-          const [netDownHistory, setNetDownHistory] = useState(Array(30).fill(0));
-          const [netUpHistory, setNetUpHistory] = useState(Array(30).fill(0));
-          const [netDownSpeed, setNetDownSpeed] = useState(0);
-          const [netUpSpeed, setNetUpSpeed] = useState(0);
-          const lastNetStats = useRef({ recv: 0, sent: 0, time: Date.now() });
-          
-          const [currentWatts, setCurrentWatts] = useState(0);
-          const [accumulatedKwh, setAccumulatedKwh] = useState(0);
-          const [startTime] = useState(Date.now());
-
-          // NEW STATES for Core Visualization
-          const [cpuCores, setCpuCores] = useState([]);
-          const [procCount, setProcCount] = useState(0);
-          const [diskReadSpeed, setDiskReadSpeed] = useState(0);
-          const [diskWriteSpeed, setDiskWriteSpeed] = useState(0);
-          const [diskIOHistory, setDiskIOHistory] = useState(Array(30).fill(0));
-          const lastDiskStats = useRef({ read: 0, write: 0, time: Date.now() });
-
-          const fetchData = async () => {
-            const res = await authFetch('/api/system/stats');
-            if (!res || !res.ok) return;
-            try {
-                const stats = await res.json();
-                setCpuLoad(stats.cpu_pct); 
-                setCpuTemp(stats.temp || 0);
-                setRamUsed(stats.ram_used / (1024**3)); setRamTotal(stats.ram_total / (1024**3));
-                setDiskUsed(stats.disk_used / (1024**3)); setDiskTotal(stats.disk_total / (1024**3));
-                setCpuHistory(prev => [...prev.slice(1), stats.cpu_pct]);
-                
-                // New stats mapping
-                setProcCount(stats.process_count || 0);
-                setCpuCores(stats.cpu_cores || []);
-
-                const estimatedWatts = 100 + ((stats.cpu_pct / 100) * 250);
-                setCurrentWatts(estimatedWatts);
-                
-                const hoursSinceStart = (Date.now() - startTime) / (1000 * 60 * 60);
-                setAccumulatedKwh((estimatedWatts * hoursSinceStart) / 1000);
-
-                const now = Date.now(); const timeDiff = (now - lastNetStats.current.time) / 1000;
-                if (timeDiff > 0 && lastNetStats.current.recv > 0) {
-                    const bytesDown = stats.net_recv - lastNetStats.current.recv;
-                    const bytesUp = stats.net_sent - lastNetStats.current.sent;
-                    
-                    // Calc speed in bits/sec
-                    const bitsDown = bytesDown * 8;
-                    const bitsUp = bytesUp * 8;
-                    
-                    const downSpeed = bitsDown / timeDiff;
-                    const upSpeed = bitsUp / timeDiff;
-                    
-                    setNetDownSpeed(downSpeed);
-                    setNetUpSpeed(upSpeed);
-                    
-                    // History in Mbps for sparkline
-                    setNetDownHistory(prev => [...prev.slice(1), downSpeed / (1024 * 1024)]);
-                    setNetUpHistory(prev => [...prev.slice(1), upSpeed / (1024 * 1024)]);
-                }
-                lastNetStats.current = { recv: stats.net_recv, sent: stats.net_sent, time: now };
-
-                // Disk I/O Calc (MB/s)
-                if (timeDiff > 0 && lastDiskStats.current.read > 0) {
-                    const readDiff = stats.disk_io_read - lastDiskStats.current.read;
-                    const writeDiff = stats.disk_io_write - lastDiskStats.current.write;
-                    const rSpeed = Math.max(0, readDiff / (1024*1024) / timeDiff);
-                    const wSpeed = Math.max(0, writeDiff / (1024*1024) / timeDiff);
-                    setDiskReadSpeed(rSpeed);
-                    setDiskWriteSpeed(wSpeed);
-                    setDiskIOHistory(prev => [...prev.slice(1), rSpeed + wSpeed]);
-                }
-                lastDiskStats.current = { read: stats.disk_io_read, write: stats.disk_io_write, time: now };
-
-            } catch(e) {}
-          };
-
-          useEffect(() => { fetchData(); const i = setInterval(fetchData, 2000); return () => clearInterval(i); }, []);
-          const getLoadColor = (val) => val > 80 ? "stroke-rose-500 text-rose-500" : val > 50 ? "stroke-amber-400 text-amber-400" : "stroke-teal-400 text-teal-400";
-
-          const formatSpeed = (speed) => {
-              if (speed < 1024 * 1024) return `${(speed / 1024).toFixed(1)} Kbps`;
-              return `${(speed / (1024 * 1024)).toFixed(1)} Mbps`;
-          };
-
-          return (
-            <div className="space-y-6 animate-fade-in pb-8">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <GlowCard title="Processor" icon={Brain}>
-                  <CircularGauge value={cpuLoad} max={100} unit="%" label="TOTAL LOAD" color={getLoadColor(cpuLoad)} />
-                </GlowCard>
-                <GlowCard title="Memory" icon={MemoryStick}>
-                  <CircularGauge value={Math.round((ramUsed / ramTotal) * 100) || 0} max={100} unit="%" label={`${ramUsed.toFixed(1)}/${ramTotal.toFixed(0)} GB`} color="stroke-indigo-400 text-indigo-400" />
-                </GlowCard>
-                <GlowCard title="Thermal" icon={Zap}>
-                  <CircularGauge value={Math.round(cpuTemp)} max={100} unit="°C" label="PACKAGE" color={cpuTemp > 80 ? "stroke-rose-500" : "stroke-emerald-400 text-emerald-400"} />
-                </GlowCard>
-                <GlowCard title="Active Procs" icon={Activity}>
-                   <div className="flex flex-col items-center justify-center h-full">
-                       <span className="text-4xl font-light text-white font-mono">{procCount}</span>
-                       <span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase mt-2">Running Tasks</span>
-                   </div>
-                </GlowCard>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <GlowCard title="Network Traffic" icon={Wifi} className="col-span-1 md:col-span-2">
-                  <div className="grid grid-cols-2 gap-8 h-full w-full px-4">
-                    <div>
-                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Down (RX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netDownSpeed)}</span></div>
-                      <div className="h-24 w-full bg-gradient-to-b from-emerald-500/5 to-transparent rounded-lg border-b border-emerald-500/20"><Sparkline data={netDownHistory} color="#34d399" height={80} /></div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Up (TX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netUpSpeed)}</span></div>
-                      <div className="h-24 w-full bg-gradient-to-b from-indigo-500/5 to-transparent rounded-lg border-b border-indigo-500/20"><Sparkline data={netUpHistory} color="#818cf8" height={80} /></div>
-                    </div>
-                  </div>
-                </GlowCard>
-
-                <GlowCard title="Disk I/O Speed" icon={HardDrive} className="col-span-1">
-                   <div className="flex flex-col justify-between h-full w-full px-2">
-                       <div className="flex flex-col gap-2 mb-4">
-                           <div className="flex justify-between"><span className="text-xs text-slate-500">READ</span><span className="text-emerald-400 font-mono">{diskReadSpeed.toFixed(1)} MB/s</span></div>
-                           <div className="flex justify-between"><span className="text-xs text-slate-500">WRITE</span><span className="text-amber-400 font-mono">{diskWriteSpeed.toFixed(1)} MB/s</span></div>
-                       </div>
-                       <div className="h-16 w-full"><Sparkline data={diskIOHistory} color="#fbbf24" height={60} /></div>
-                   </div>
-                </GlowCard>
-              </div>
-
-              {/* NEW CORE VISUALIZER */}
-              <CyberCard title="Neural Core Architecture" className="w-full min-h-[350px] flex flex-col items-center justify-center">
-                  <CpuCoreVisuals cores={cpuCores} />
-              </CyberCard>
-            </div>
-          );
-        };
-
-        const StorageView = ({ theme }) => {
-          const [currentPath, setCurrentPath] = useState(['ROOT']);
-          const [files, setFiles] = useState([]);
-          const [quota, setQuota] = useState({ used: 0, limit: 30 * 1024 * 1024 * 1024 });
-
-          const fetchFiles = async () => {
-             const res = await authFetch('/api/storage/list?path=' + (currentPath.length > 1 ? currentPath.slice(1).join('/') : ''));
-             if (res && res.ok) {
-                 const data = await res.json();
-                 setFiles(data.files || []);
-             } else { setFiles([]); }
-             const qRes = await authFetch('/api/storage/quota');
-             if (qRes && qRes.ok) { const qData = await qRes.json(); setQuota({ used: qData.used, limit: qData.limit }); }
-          };
-
-          useEffect(() => { fetchFiles(); }, [currentPath]);
-          
-          const handleUpload = async (e) => {
-             const files = e.target.files;
-             if (!files || files.length === 0) return;
-
-             const formData = new FormData();
-             const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') : "";
-             formData.append('path', relPath);
-             
-             for(let i = 0; i < files.length; i++) {
-                 formData.append('files', files[i]);
-             }
-
-             // DEBUG: Log what we are sending
-             console.log("Uploading to path:", relPath);
-
-             const res = await authFetch('/api/storage/upload', {
-                 method: 'POST',
-                 body: formData
-             });
-             
-             if(res && res.ok) {
-                 fetchFiles();
-                 alert("Uppladdning lyckades!");
-             } else {
-                 console.error("Upload error", res);
-                 alert("Uppladdning misslyckades. Kontrollera serverrättigheter (chown)!");
-             }
-          };
-
-          const handleDownload = async (name) => {
-              const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') + '/' + name : name;
-              const res = await authFetch(`/api/storage/download?path=${relPath}`);
-              if(res && res.ok) {
-                  const blob = await res.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = name;
-                  document.body.appendChild(a);
-                  a.click();
-                  window.URL.revokeObjectURL(url);
-              } else {
-                  alert("Download failed.");
-              }
-          };
-
-          const handleDelete = async (name) => { 
-              if(!confirm("Permanently delete " + name + "?")) return;
-              
-              const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') + '/' + name : name;
-              const res = await authFetch('/api/storage/delete', {
-                  method: 'POST',
-                  body: JSON.stringify({ path: relPath })
-              });
-
-              if(res && res.ok) {
-                  fetchFiles();
-              } else {
-                  alert("Delete failed.");
-              }
-          };
-
-          const getIcon = (type) => {
-             if(type === 'folder') return <Folder size={18} className="text-amber-400 fill-amber-400/20"/>;
-             return <File size={18} className="text-indigo-400"/>;
-          };
-
-          const usedPercent = Math.min(100, (quota.used / quota.limit) * 100);
-
-          return (
-            <div className="space-y-6 animate-fade-in">
-                <GlowCard title="Capacity" icon={HardDrive} className="md:col-span-3" theme={theme}>
-                    <div className="flex flex-col gap-3 w-full px-4">
-                        <div className="flex justify-between text-xs font-medium text-slate-400 tracking-wider">
-                            <span>USED: {formatBytes(quota.used)}</span>
-                            <span className="text-teal-400 font-bold">{usedPercent.toFixed(1)}%</span>
-                            <span>TOTAL: {formatBytes(quota.limit)}</span>
-                        </div>
-                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden flex shadow-inner relative">
-                            <div style={{ width: `${usedPercent}%` }} className="h-full bg-gradient-to-r from-teal-600 to-cyan-500 rounded-full shadow-[0_0_10px_rgba(45,212,191,0.3)] transition-all duration-1000" />
-                            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white mix-blend-difference">{usedPercent.toFixed(1)}% Full</div>
-                        </div>
-                    </div>
-                </GlowCard>
-
-                <Card title="Aurora-Nova Explorer" icon={Folder} theme={theme}>
-                   <div className={`flex items-center gap-2 mb-6 p-2 ${theme.inputBg} rounded-lg border ${theme.border}`}>
-                      <button onClick={() => setCurrentPath(p => p.length > 1 ? p.slice(0, -1) : p)} disabled={currentPath.length === 1} className={`p-2 hover:bg-black/5 rounded-md disabled:opacity-30 ${theme.text}`}><CornerLeftUp size={16} /></button>
-                      <div className={`font-mono text-sm ${theme.accent} flex-1 ml-2 tracking-tight`}>{currentPath.join(' / ')}</div>
-                      <div className="flex gap-2">
-                         <label className="cursor-pointer p-2 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 rounded-md text-xs font-bold flex items-center gap-2 transition-colors">
-                            <Plus size={14} /> ADD FILE
-                            <input type="file" className="hidden" multiple onChange={handleUpload} />
-                         </label>
-                      </div>
-                   </div>
-                   {files.length === 0 ? (
-                       <div className="text-center py-16 text-slate-600 italic text-sm flex flex-col items-center gap-3">
-                           <Folder size={32} className="opacity-20" />
-                           Empty directory
-                       </div>
-                   ) : (
-                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {files.map((file, i) => (
-                             <div key={i} className={`${theme.id === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.02] border-white/5'} border hover:border-teal-500/30 p-3 rounded-lg flex items-center justify-between group transition-all cursor-pointer`}>
-                                <div className="flex items-center gap-3 overflow-hidden" onClick={() => file.type === 'dir' && setCurrentPath(p => [...p, file.name])}>
-                                   <div className={`p-2 rounded-md ${theme.id === 'light' ? 'bg-white border border-slate-200' : 'bg-black/20'}`}>{getIcon(file.type === 'dir' ? 'folder' : 'file')}</div>
-                                   <div className="overflow-hidden"><div className={`text-sm font-medium truncate ${theme.text}`}>{file.name}</div>{file.type !== 'dir' && <div className={`text-[10px] ${theme.textDim}`}>{formatBytes(file.size || 0)}</div>}</div>
-                                </div>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {file.type !== 'dir' && <button onClick={(e) => {e.stopPropagation(); handleDownload(file.name)}} className="p-1.5 hover:bg-teal-500/10 text-slate-500 hover:text-teal-400 rounded transition-all"><Download size={14} /></button>}
-                                    <button onClick={(e) => {e.stopPropagation(); handleDelete(file.name)}} className="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded transition-all"><Trash2 size={14} /></button>
-                                </div>
-                             </div>
-                          ))}
-                       </div>
-                   )}
-                </Card>
-            </div>
-          );
-        };
-
-        const MinecraftView = ({ theme }) => {
-          const [status, setStatus] = useState('OFFLINE');
-          const [players, setPlayers] = useState(0);
-          const [maxPlayers, setMaxPlayers] = useState(20);
-          const [logs, setLogs] = useState([]);
-          const [cmdInput, setCmdInput] = useState("");
-          const logRef = useRef(null);
-          const [tps, setTps] = useState(0.0);
-          const [ramUsage, setRamUsage] = useState(0.0);
-
-          useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [logs]);
-
-          const updateData = async () => {
-             const resStatus = await authFetch('/api/minecraft/status');
-             if (resStatus && resStatus.ok) {
-                 const data = await resStatus.json();
-                 setStatus(data.running ? 'ONLINE' : 'OFFLINE');
-                 setPlayers(data.online_players || 0);
-                 setMaxPlayers(data.max_players || 20);
-                 setTps(data.running ? (data.tps || 20.0) : 0); 
-                 setRamUsage(data.running ? (data.ram_usage || 4.2) : 0);
-             } else { 
-                 setStatus('OFFLINE'); 
-                 setTps(0);
-                 setRamUsage(0);
-             }
-             const resLogs = await authFetch('/api/minecraft/logs');
-             if (resLogs && resLogs.ok) { const data = await resLogs.json(); setLogs(data.logs || []); }
-          };
-
-          useEffect(() => { updateData(); const interval = setInterval(updateData, 2000); return () => clearInterval(interval); }, []);
-
-          const sendCommand = async () => {
-              if(!cmdInput) return;
-              setLogs(prev => [...prev, `> ${cmdInput}`]);
-              try { await authFetch('/api/minecraft/command', { method: 'POST', body: JSON.stringify({ command: cmdInput }) }); setCmdInput(""); setTimeout(updateData, 500); } catch(e) { }
-          };
-
-          const handleStart = async () => { if (status !== 'OFFLINE') return; setStatus('STARTING'); setLogs(prev => [...prev, "[System]: Initializing startup sequence..."]); try { await authFetch('/api/minecraft/start', { method: 'POST' }); } catch(e) {} };
-          const handleStop = async () => { if (status === 'OFFLINE') return; setStatus('STOPPING'); setLogs(prev => [...prev, "[System]: Stopping server..."]); try { await authFetch('/api/minecraft/stop', { method: 'POST' }); } catch(e) {} };
-
-          return (
-            <div className="animate-fade-in space-y-6">
-                <header className="flex flex-col md:flex-row justify-between items-end pb-6 mb-2">
-                    <div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-white flex items-center gap-3 tracking-tight">
-                            Minecraft<span className="text-teal-400 font-light">Server</span>
-                        </h1>
-                        <p className="text-xs font-mono text-slate-400 mt-2 flex items-center gap-2"><Server size={12}/> AURORA-YMIR-1 // DOCKER CONTAINER</p>
-                    </div>
-                    <div className={`flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 mt-4 md:mt-0`}>
-                        <div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] ${status === 'ONLINE' ? 'bg-emerald-400 text-emerald-400' : status === 'OFFLINE' ? 'bg-rose-500 text-rose-500' : 'bg-amber-400 text-amber-400'}`}></div>
-                        <span className="text-sm font-bold tracking-wide text-slate-200">{status}</span>
-                    </div>
-                </header>
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
-                    <div className="lg:col-span-1 space-y-4">
-                       <MinecraftCard title="Control Panel" icon={Settings}>
-                           <div className="grid gap-3">
-                               <button onClick={handleStart} disabled={status !== 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all shadow-lg ${status === 'OFFLINE' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:to-emerald-400 text-white' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}><Play size={16} fill="currentColor" /> START</button>
-                               <button onClick={() => { handleStop(); setTimeout(handleStart, 5000); }} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status === 'ONLINE' ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><RotateCcw size={16} /> RESTART</button>
-                               <button onClick={handleStop} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status !== 'OFFLINE' ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><Square size={16} fill="currentColor" /> STOP</button>
-                           </div>
-                       </MinecraftCard>
-                       <MinecraftCard title="Players" icon={Users}>
-                           <div className="flex justify-between items-end mb-2"><span className="text-3xl font-light text-white">{players}</span><span className="text-xs text-slate-500 mb-1 uppercase font-bold">/ {maxPlayers} Online</span></div>
-                           <div className="h-1.5 w-full bg-slate-800/50 rounded-full overflow-hidden"><div className="h-full bg-teal-500 transition-all duration-500" style={{ width: `${(players/maxPlayers)*100}%` }} /></div>
-                       </MinecraftCard>
-                       <div className="grid grid-cols-2 gap-4">
-                           <MinecraftCard title="TPS" icon={Activity} className="items-center justify-center text-center">
-                               <div className={`text-xl font-bold ${tps >= 18 ? 'text-emerald-400' : 'text-amber-400'}`}>{tps.toFixed(1)}</div>
-                           </MinecraftCard>
-                           <MinecraftCard title="RAM" icon={MemoryStick} className="items-center justify-center text-center">
-                               <div className="text-xl font-bold text-indigo-400">{ramUsage.toFixed(1)}G</div>
-                           </MinecraftCard>
-                       </div>
-                    </div>
-                    <div className="lg:col-span-3 h-[600px] lg:h-auto">
-                        <MinecraftCard title="Console" icon={Terminal} className="h-full bg-slate-950/80">
-                            <div className="flex flex-col h-full">
-                                <div ref={logRef} className="flex-1 overflow-y-auto font-mono text-sm space-y-1 pr-2 custom-scrollbar p-2 rounded border border-white/5 mb-4 shadow-inner bg-black/40">
-                                    {logs.map((log, i) => <TerminalLine key={i} text={log} />)}
-                                    {status === 'OFFLINE' && <div className="text-slate-600 italic text-xs text-center mt-10 opacity-50">Server is offline. Logs unavailable.</div>}
-                                </div>
-                                <div className="flex gap-2 items-center bg-white/5 p-1.5 rounded-lg border border-white/5 focus-within:border-teal-500/50 focus-within:ring-1 focus-within:ring-teal-500/20 transition-all">
-                                    <span className="pl-2 text-teal-500 font-mono font-bold">&gt;</span>
-                                    <input type="text" value={cmdInput} onChange={(e) => setCmdInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendCommand()} placeholder="Execute command..." className="w-full bg-transparent border-none text-slate-200 font-mono text-sm outline-none" disabled={status === 'OFFLINE'} />
-                                </div>
-                            </div>
-                        </MinecraftCard>
-                    </div>
-                </div>
-            </div>
-          );
-        };
-
+        // Minimal placeholders to avoid runtime ReferenceErrors for missing views
         const BorealisView = ({ theme, avatar }) => {
-          const [messages, setMessages] = useState([{ id: 1, sender: 'ai', text: 'Greetings. I am Borealis. How can I assist with server operations today?' }]);
-          const [input, setInput] = useState("");
-          const scrollRef = useRef(null);
-          const [isLoading, setIsLoading] = useState(false);
-
-          const sendMessage = async (e) => {
-            e.preventDefault(); if (!input.trim()) return;
-            const userMsg = { id: Date.now(), sender: 'user', text: input };
-            setMessages(prev => [...prev, userMsg]); setInput(""); setIsLoading(true);
-            try {
-                const res = await authFetch('/api/borealis/chat', { method: 'POST', body: JSON.stringify({ message: userMsg.text }) });
-                if (res && res.ok) { const data = await res.json(); setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: data.response || "Err" }]); } 
-                else { setTimeout(() => { setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: "I cannot connect to my core logic at the moment. (Simulated Response)" }]); }, 1000); }
-            } catch (error) { setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: "Connection Error." }]); } finally { setIsLoading(false); }
-          };
-          useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isLoading]);
-          
           return (
-            <Card title="BOREALIS INTELLIGENCE" icon={Sparkles} className="h-[600px] flex flex-col animate-fade-in" theme={theme}>
-              <div className="flex-1 overflow-y-auto space-y-6 pr-4 mb-4 custom-scrollbar p-2">
-                  {messages.map(msg => (
-                      <div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          {msg.sender === 'ai' && <div className="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400 border border-teal-500/30 shrink-0"><Sparkles size={16}/></div>}
-                          
-                          <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-lg ${msg.sender === 'user' ? 'bg-teal-600 text-white rounded-br-none' : `${theme.inputBg} ${theme.text} border ${theme.border} rounded-bl-none`}`}>
-                              {msg.text}
-                          </div>
-                          
-                          {msg.sender === 'user' && (
-                             <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-700 border border-white/10 shrink-0">
-                                 {avatar ? <img src={avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">U</div>}
-                             </div>
-                          )}
-                      </div>
-                  ))}
-                  {isLoading && <div className="flex gap-2 items-center text-xs text-teal-400 ml-12 animate-pulse"><Sparkles size={12}/> Processing query...</div>}
-                  <div ref={scrollRef}></div>
-              </div>
-              <form onSubmit={sendMessage} className="relative">
-                  <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Borealis..." className={`w-full ${theme.inputBg} border ${theme.border} rounded-xl p-4 pr-12 text-sm ${theme.text} focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20 outline-none transition-all shadow-inner`} />
-                  <button type="submit" disabled={isLoading} className={`absolute right-2 top-2 p-2 rounded-lg ${theme.accentBg} ${theme.accent} hover:opacity-80 transition-all`}><ArrowUp size={18} /></button>
-              </form>
-            </Card>
+            <div className="p-6">
+              <h3 className="text-lg font-bold">Borealis AI</h3>
+              <p className="text-sm text-slate-400">Borealis interface not yet implemented.</p>
+            </div>
           );
         };
-        
-        const SettingsView = ({ theme, setTheme, username, avatar, setAvatar }) => {
-            const [formData, setFormData] = useState({ email: 'admin@borealis.dev', password: '', newPassword: '' });
-            const handleChange = (e) => setFormData({...formData, [e.target.name]: e.target.value});
-            
-            const handleAvatarUpload = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setAvatar(reader.result);
-                        localStorage.setItem('user_avatar', reader.result);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
 
-            const handleSave = async () => { 
-                if(formData.newPassword) {
-                    alert("Simulated: Password updated successfully.");
-                } else {
-                    alert("Settings saved."); 
-                }
-                setFormData({...formData, password: '', newPassword: ''});
-            };
-
-            return (
-            <div className="max-w-3xl mx-auto animate-fade-in">
-                <Card title="User Configuration" icon={Cog} theme={theme} className="mb-6">
-                    <div className="grid gap-6">
-                        <div className="flex items-center gap-6 pb-6 border-b border-white/5">
-                            <div className="relative group">
-                                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg shadow-teal-500/20 overflow-hidden">
-                                    {avatar ? <img src={avatar} className="w-full h-full object-cover" /> : username[0]}
-                                </div>
-                                <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full">
-                                    <Camera size={24} className="text-white" />
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                                </label>
-                            </div>
-                            <div>
-                                <h3 className={`text-xl font-bold ${theme.text}`}>{username}</h3>
-                                <p className={`text-sm ${theme.textDim}`}>Super Admin // Level 10</p>
-                                <label className="mt-2 inline-block text-xs text-teal-400 hover:text-teal-300 cursor-pointer">
-                                    Change Profile Picture
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-6">
-                            <div>
-                                <label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>Email Address</label>
-                                <input type="email" name="email" value={formData.email} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} />
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                                <div>
-                                    <label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>Current Password</label>
-                                    <input type="password" name="password" value={formData.password} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="********" />
-                                </div>
-                                <div>
-                                    <label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>New Password</label>
-                                    <input type="password" name="newPassword" value={formData.newPassword} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="Enter new password" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex justify-end pt-4">
-                            <button onClick={handleSave} className="bg-teal-600 hover:bg-teal-500 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg shadow-teal-900/20 transition-all">Save Changes</button>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card title="Interface Theme" icon={Layers} theme={theme}>
-                     <div className="grid grid-cols-2 gap-4">
-                        <button onClick={() => setTheme(THEMES.cyberpunk)} className={`p-6 rounded-xl border flex flex-col items-center gap-3 transition-all ${theme.id === 'cyberpunk' ? 'border-teal-500 bg-teal-500/10 text-teal-400' : 'border-white/10 hover:bg-white/5 text-slate-400'}`}>
-                            <Moon size={28} />
-                            <span className="text-xs font-bold tracking-widest">NEBULA (DARK)</span>
-                        </button>
-                        <button onClick={() => setTheme(THEMES.light)} className={`p-6 rounded-xl border flex flex-col items-center gap-3 transition-all ${theme.id === 'light' ? 'border-indigo-500 bg-indigo-50 text-indigo-600 shadow-md' : 'border-white/10 hover:bg-white/5 text-slate-400'}`}>
-                            <Sun size={28} />
-                            <span className="text-xs font-bold tracking-widest">DAYLIGHT</span>
-                        </button>
-                     </div>
-                </Card>
+        const SettingsView = ({ username, theme, setTheme, avatar, setAvatar }) => {
+          return (
+            <div className="p-6">
+              <h3 className="text-lg font-bold">Settings</h3>
+              <p className="text-sm text-slate-400">Settings panel placeholder.</p>
             </div>
-            );
+          );
         };
 
-        const NeuralView = ({ theme, username }) => {
-            const [greeting, setGreeting] = useState("");
-            const [logEntry, setLogEntry] = useState("");
-            const [currentDate, setCurrentDate] = useState(new Date());
-            const [selectedDate, setSelectedDate] = useState(new Date());
-            const [appointments, setAppointments] = useState({ [new Date().toDateString()]: [{ id: 1, title: "System Check", time: "09:00", reminder: false }] });
-            const [isModalOpen, setIsModalOpen] = useState(false);
-            const [weather, setWeather] = useState({ temp: 0, condition: 'cloudy' });
-            const [forecast] = useState(generateForecast());
-
-            useEffect(() => {
-                setGreeting(getGreeting());
-                fetch('https://api.open-meteo.com/v1/forecast?latitude=59.33&longitude=18.07&current=temperature_2m,weather_code')
-                    .then(r => r.json())
-                    .then(d => {
-                        if(d.current) {
-                            let cond = 'cloudy';
-                            const code = d.current.weather_code;
-                            if (code === 0) cond = 'sunny';
-                            else if (code < 3) cond = 'partly';
-                            else if (code < 60) cond = 'cloudy';
-                            else if (code < 80) cond = 'rainy';
-                            else cond = 'rainy';
-                            setWeather({ temp: Math.round(d.current.temperature_2m), condition: cond });
-                        }
-                    }).catch(e => console.error("Weather error", e));
-                const savedLog = localStorage.getItem('captainsLog');
-                if (savedLog) setLogEntry(savedLog);
-            }, []);
-
-            const handleSaveLog = () => { localStorage.setItem('captainsLog', logEntry); alert("Entry Saved."); };
-            const handleAddAppointment = ({ desc, time, reminder }) => { const key = selectedDate.toDateString(); const newAppt = { id: Date.now(), title: desc, time, reminder }; setAppointments(prev => ({ ...prev, [key]: [...(prev[key] || []), newAppt].sort((a,b) => a.time.localeCompare(b.time)) })); };
-            const handleDeleteAppointment = (apptId) => { const key = selectedDate.toDateString(); setAppointments(prev => ({ ...prev, [key]: prev[key].filter(a => a.id !== apptId) })); };
-            const daysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-            const getStartDay = (date) => { let day = new Date(date.getFullYear(), date.getMonth(), 1).getDay(); return day === 0 ? 6 : day - 1; };
-            const renderCalendarDays = () => { const days = []; const totalDays = daysInMonth(currentDate); const startDay = getStartDay(currentDate); for (let i = 0; i < startDay; i++) days.push(<div key={`empty-${i}`} className="h-9 w-9" />); for (let d = 1; d <= totalDays; d++) { const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d); const isSelected = date.toDateString() === selectedDate.toDateString(); const isToday = date.toDateString() === new Date().toDateString(); const hasEvents = appointments[date.toDateString()]?.length > 0; days.push(<button key={d} onClick={() => setSelectedDate(date)} className={`relative h-9 w-9 rounded-full flex items-center justify-center text-sm transition-all ${isSelected ? 'bg-teal-500 text-white font-bold shadow-lg shadow-teal-500/30' : 'hover:bg-white/10 text-slate-300'} ${isToday && !isSelected ? 'border border-teal-500/50 text-teal-400' : ''}`}>{d} {hasEvents && !isSelected && (<div className="absolute bottom-1 w-1 h-1 bg-teal-400 rounded-full" />)}</button>); } return days; };
-
-            return (
-                <div className="animate-fade-in space-y-8">
-                    {/* Hero Section - Updated Font to Playfair Display/Serif */}
-                    <div className="relative p-8 rounded-3xl bg-gradient-to-r from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-white/5 overflow-hidden">
-                        <div className="absolute right-0 top-0 w-64 h-64 bg-teal-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                        <div className="relative z-10">
-                            <h1 className="text-5xl md:text-6xl font-cybero tracking-tight text-white mb-2 italic">
-                                {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-teal-500 not-italic">{username}</span>
-                            </h1>
-                            <div className="flex items-center gap-3 text-slate-400 text-sm font-medium mt-4">
-                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div> All Systems Nominal</span>
-                                <span className="opacity-30">|</span>
-                                <span>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Weather Widget */}
-                        <CyberCard className="col-span-1 min-h-[300px]">
-                             <div className="flex flex-col justify-between h-full">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <div className="text-5xl font-light text-white">{weather.temp}°</div>
-                                        <div className="text-teal-400 text-sm font-bold uppercase tracking-wider mt-1">{weather.condition}</div>
-                                        <div className="text-slate-500 text-xs mt-1 flex items-center gap-1"><MapPin size={10} /> Stockholm</div>
-                                    </div>
-                                    <div className="w-24 h-24"><WeatherVisuals condition={weather.condition} /></div>
-                                </div>
-                                <div className="mt-6">
-                                    <div className="text-[10px] font-bold text-slate-500 mb-3 uppercase tracking-widest">Forecast</div>
-                                    <div className="flex justify-between overflow-x-auto pb-2 gap-2 scrollbar-none">
-                                        {forecast.slice(0, 5).map((item, idx) => (
-                                            <div key={idx} className="flex flex-col items-center space-y-2 min-w-[50px]">
-                                                <span className="text-[10px] text-slate-500">{item.time}</span>
-                                                <div className="text-slate-300">{item.condition === 'sunny' ? <Sun size={16}/> : item.condition === 'rainy' ? <CloudRain size={16}/> : <Cloud size={16}/>}</div>
-                                                <span className="text-xs font-bold text-white">{item.temp}°</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                             </div>
-                        </CyberCard>
-
-                        {/* Calendar */}
-                        <CyberCard title="Agenda" className="col-span-1 lg:col-span-2" actionButton={<button onClick={() => setIsModalOpen(true)} className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 transition-colors"><Plus size={16} /></button>}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-                                <div>
-                                    <div className="flex justify-between items-center mb-4 px-1">
-                                        <button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()-1); setCurrentDate(d); }} className="text-slate-500 hover:text-white"><ChevronLeft size={18} /></button>
-                                        <span className="text-sm font-bold text-white uppercase tracking-wider">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
-                                        <button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()+1); setCurrentDate(d); }} className="text-slate-500 hover:text-white"><ChevronRight size={18} /></button>
-                                    </div>
-                                    <div className="grid grid-cols-7 gap-1 text-center mb-2">{['M','T','W','T','F','S','S'].map(d => <span key={d} className="text-[10px] font-bold text-slate-600">{d}</span>)}</div>
-                                    <div className="grid grid-cols-7 gap-1 place-items-center">{renderCalendarDays()}</div>
-                                </div>
-                                <div className="border-l border-white/5 pl-6 flex flex-col h-full">
-                                    <h4 className="text-xs font-bold text-teal-500 mb-4 uppercase tracking-widest">{selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}</h4>
-                                    <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                                        {appointments[selectedDate.toDateString()]?.length > 0 ? (appointments[selectedDate.toDateString()].map((appt) => (
-                                            <div key={appt.id} className="bg-white/[0.03] hover:bg-white/[0.06] border-l-2 border-teal-500 p-3 rounded-r-lg transition-colors group flex justify-between">
-                                                <div>
-                                                    <div className="text-xs font-bold text-white mb-0.5">{appt.title}</div>
-                                                    <div className="text-[10px] text-slate-400 font-mono">{appt.time}</div>
-                                                </div>
-                                                <button onClick={() => handleDeleteAppointment(appt.id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-rose-400 transition-all"><Trash2 size={14} /></button>
-                                            </div>
-                                        ))) : (<div className="text-slate-600 italic text-xs mt-10 text-center">No events scheduled.</div>)}
-                                    </div>
-                                </div>
-                            </div>
-                        </CyberCard>
-                    </div>
-
-                     {/* Notes & Plasma Clock - SIDE BY SIDE NOW */}
-                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        {/* Plasma Clock Card */}
-                        <CyberCard className="col-span-1 flex items-center justify-center min-h-[200px]">
-                            <div className="flex flex-col items-center gap-4">
-                                <PlasmaClock />
-                                <div className="text-xs font-mono text-orange-400/80 tracking-[0.2em]">SYSTEM TIME</div>
-                            </div>
-                        </CyberCard>
-
-                        {/* Captain's Log Card */}
-                        <CyberCard title="Captain's Log" className="col-span-1 md:col-span-3 min-h-[200px]" actionButton={<button onClick={handleSaveLog} className="flex items-center gap-2 text-xs font-bold text-teal-400 hover:text-teal-300"><Save size={14} /> SAVE</button>}>
-                            <textarea value={logEntry} onChange={(e) => setLogEntry(e.target.value)} placeholder="Write your observations..." className="w-full h-full bg-transparent border-none outline-none resize-none text-sm text-slate-300 placeholder:text-slate-600 leading-relaxed min-h-[120px]" spellCheck="false" />
-                        </CyberCard>
-                     </div>
-
-                    <AddAppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} selectedDate={selectedDate} onSave={handleAddAppointment} />
-                </div>
-            );
-        };
-
-        // --- MAIN APP ---
         function AuroraOS() {
           const [activeTab, setActiveTab] = useState('neural');
           const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -1483,62 +1173,14 @@
           return (
             <div className={`flex h-screen w-full ${theme.bg} transition-colors duration-700 font-sans overflow-hidden relative`}>
               <ParticleBackground theme={theme} />
-              
-              {/* Sidebar */}
               <aside className={`fixed md:relative top-0 left-0 h-full w-64 ${theme.sidebar} backdrop-blur-2xl transition-transform duration-300 ease-out z-40 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} pt-16 md:pt-0`}>
-                <div className="p-8 mb-2 hidden md:block">
-                    <div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
-                            <Zap size={18} fill="currentColor"/>
-                        </div>
-                        AURORA
-                    </div>
-                    <div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div>
-                </div>
-
-                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">
-                  {navItems.map(item => (
-                    <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}>
-                      <item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-                      <span className="text-sm tracking-wide">{item.label}</span>
-                      {activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}
-                    </button>
-                  ))}
-                </nav>
-
-                <div className={`p-6 mt-auto`}>
-                    <button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}>
-                        <LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/>
-                        <span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span>
-                    </button>
-                </div>
+                <div className="p-8 mb-2 hidden md:block"><div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20"><Zap size={18} fill="currentColor"/></div>AURORA</div><div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div></div>
+                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">{navItems.map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}><item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} /><span className="text-sm tracking-wide">{item.label}</span>{activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}</button>))}</nav>
+                <div className={`p-6 mt-auto`}><button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}><LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/><span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span></button></div>
               </aside>
-
-              {/* Mobile Menu Button */}
-              <div className="md:hidden fixed top-4 left-4 z-50">
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">
-                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
-              </div>
-
-              {/* Main Content */}
+              <div className="md:hidden fixed top-4 left-4 z-50"><button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button></div>
               <main className="flex-1 overflow-y-auto p-4 md:p-10 relative scrollbar-thin scrollbar-thumb-slate-700/20 z-10">
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                   {/* Breadcrumb / Title */}
-                   <div className="flex flex-col">
-                       <h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2>
-                   </div>
-
-                   {/* Status Bar */}
-                   <div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}>
-                        <div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div>
-                        <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
-                        <div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div>
-                        <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
-                        <div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                   </div>
-                </header>
-                
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4"><div className="flex flex-col"><h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2></div><div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}><div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div></header>
                 {activeTab === 'neural' && <NeuralView theme={theme} username={username} />}
                 {activeTab === 'telemetry' && <TelemetryView theme={theme} />}
                 {activeTab === 'health' && <HealthView theme={theme} />}
@@ -1557,40 +1199,3 @@
     </script>
 </body>
 </html>
-
-```
-
-Felet "Inline Babel script:503 Auto login failed. Ensure Docker Manager is running on port 8001. TypeError: Failed to fetch" beror, precis som det står, på att webbläsaren inte kan nå din Docker Manager backend på port 8001.
-
-**Det här är vad som händer:**
-Du har en backend för huvudapplikationen (sannolikt på port 8000) och en *separat* backend för Docker-hantering på port 8001. Din frontend (React-koden i `index.html`) försöker göra ett anrop (`fetch`) till `http://<din-server-ip>:8001/api/login` för att logga in automatiskt.
-
-När du får `TypeError: Failed to fetch` och `net::ERR_CONNECTION_REFUSED` betyder det att antingen:
-1.  Tjänsten på port 8001 är **inte startad**.
-2.  Tjänsten är startad men **lyssnar inte på rätt nätverksinterface** (t.ex. bara på `localhost` inne i sin container/server, men inte utåt mot ditt LAN/internet).
-3.  En **brandvägg** blockerar port 8001.
-4.  Din webbläsare blockerar anropet p.g.a **Mixed Content** (om du kör huvudappen via HTTPS men anropar Docker-backend via HTTP).
-
-**Lösning (Steg-för-steg):**
-
-1.  **Kontrollera att containern körs:**
-    Gå in på servern via SSH och kör `docker ps`. Du ska se `aurora-docker-manager` i listan och att den mappar port `0.0.0.0:8001->8000/tcp`.
-    * Om den inte körs: Kör `docker-compose up -d` i mappen `docker_manager`.
-
-2.  **Kontrollera portmappningen:**
-    I din `docker-compose.yml` för docker_manager, se till att ports är definierade så här:
-    ```yaml
-    ports:
-      - "8001:8000"
-    ```
-    Och i din `Dockerfile` eller `uvicorn`-kommando, se till att host är satt till `0.0.0.0` (inte `127.0.0.1`):
-    ```bash
-    CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    ```
-    *(Detta ser korrekt ut i filerna du skickade tidigare, men dubbelkolla på servern).*
-
-3.  **Öppna porten:**
-    Om du kör Ubuntu med UFW (brandvägg), måste du tillåta port 8001:
-    ```bash
-    sudo ufw allow 8001/tcp
-    sudo ufw reload

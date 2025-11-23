@@ -17,11 +17,13 @@ from .dependencies import (
     SECRET_KEY, ALGORITHM, STORAGE_PATH
 )
 
+# Import Routers
 from .borealis_backend import router as borealis_router
 from .minecraft_backend import router as minecraft_router
 from .system_backend import router as system_router
 from .storage_backend import router as storage_router
 from .health_backend import router as health_router
+from .docker_backend import router as docker_router # <--- NY ROUTER
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,48 +38,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include all routers
 app.include_router(borealis_router)
 app.include_router(minecraft_router)
 app.include_router(system_router)
 app.include_router(storage_router)
 app.include_router(health_router)
+app.include_router(docker_router) # <--- AKTIVERA HÄR
 
 @app.on_event("startup")
 async def startup_event():
-    """Runs when the server starts. Creates database tables and default users."""
+    """Körs när servern startar. Skapar tabeller och standardanvändare."""
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # Default password for initialization
         DEFAULT_PW = "default123"
         hashed_pw = get_password_hash(DEFAULT_PW)
 
-        # 1. Create Aurora (Admin) - Has all privileges
         if not db.query(User).filter(User.username == "aurora").first():
             logger.info("Creating default admin user: aurora")
-            db.add(User(
-                username="aurora", 
-                email="aurora@aurora-cloud.local",
-                password_hash=hashed_pw, 
-                is_admin=True
-            ))
+            db.add(User(username="aurora", email="aurora@aurora-cloud.local", password_hash=hashed_pw, is_admin=True))
         
-        # 2. Create Freyja (Standard user) - No Docker access
         if not db.query(User).filter(User.username == "freyja").first():
             logger.info("Creating standard user: freyja")
-            db.add(User(
-                username="freyja", 
-                email="freyja@aurora-cloud.local",
-                password_hash=hashed_pw, 
-                is_admin=False
-            ))
+            db.add(User(username="freyja", email="freyja@aurora-cloud.local", password_hash=hashed_pw, is_admin=False))
 
         db.commit()
         Path(STORAGE_PATH).mkdir(parents=True, exist_ok=True)
     finally:
         db.close()
 
-# --- AUTH MODELS ---
 class LoginReq(BaseModel):
     username: str
     password: str
@@ -86,7 +76,6 @@ class ChangePasswordReq(BaseModel):
     old_password: str
     new_password: str
 
-# --- AUTH ENDPOINTS ---
 @app.post("/api/auth/login")
 async def login(req: LoginReq, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == req.username).first()
@@ -97,40 +86,26 @@ async def login(req: LoginReq, db: Session = Depends(get_db)):
 
 @app.post("/api/auth/change-password")
 async def change_password(req: ChangePasswordReq, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # 1. Verify old password
     if not verify_password(req.old_password, current_user.password_hash):
-        raise HTTPException(status_code=400, detail="Old password is incorrect.")
-    
-    # 2. Set new password
+        raise HTTPException(status_code=400, detail="Det gamla lösenordet är fel.")
     current_user.password_hash = get_password_hash(req.new_password)
     db.commit()
-    return {"message": "Password updated"}
+    return {"message": "Lösenord uppdaterat"}
 
 @app.get("/api/user/me")
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return {"username": current_user.username, "is_admin": current_user.is_admin}
 
-# --- STORAGE QUOTA ENDPOINT ---
 @app.get("/api/storage/quota")
 async def get_storage_quota(user: User = Depends(get_current_user)):
     total_size = 0
-    # Calculate size recursively
     for dirpath, dirnames, filenames in os.walk(STORAGE_PATH):
         for f in filenames:
             fp = os.path.join(dirpath, f)
             if not os.path.islink(fp):
-                try:
-                    total_size += os.path.getsize(fp)
-                except OSError:
-                    continue
-    
-    limit = 30 * 1024 * 1024 * 1024  # 30 GB
-    percent = min(100, (total_size / limit) * 100) if limit else 0
-    return {
-        "used": total_size,
-        "limit": limit,
-        "percent": percent
-    }
+                total_size += os.path.getsize(fp)
+    limit = 30 * 1024 * 1024 * 1024 
+    return { "used": total_size, "limit": limit, "percent": min(100, (total_size / limit) * 100) }
 
 @app.get("/metrics")
 async def metrics():
