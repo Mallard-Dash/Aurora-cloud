@@ -511,15 +511,167 @@
             );
         };
 
+const StreamingView = ({ theme }) => {
+            const [status, setStatus] = useState('unknown');
+            const [showQr, setShowQr] = useState(false);
+            const [activeCategory, setActiveCategory] = useState('movies');
+            
+            // Hämta IP och bygg URL
+            const serverIp = window.location.hostname;
+            const jellyfinPort = 8096;
+            const jellyfinUrl = `http://${serverIp}:${jellyfinPort}`;
+
+            // Kategorier för "Media Hub"
+            const categories = [
+                { id: 'movies', label: 'Movies', icon: Film, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', desc: '4K HDR Cinema Collection' },
+                { id: 'tv', label: 'TV Shows', icon: Tv, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', desc: 'Binge-worthy Series' },
+                { id: 'music', label: 'Music', icon: Music, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20', desc: 'Lossless Audio Library' },
+                { id: 'photos', label: 'Photos', icon: ImageIcon, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'Memories & Albums' }
+            ];
+
+            const checkStatus = async () => {
+                const res = await authFetch('/api/docker/containers');
+                if (res && res.ok) {
+                    const containers = await res.json();
+                    const jf = containers.find(c => c.image.includes('jellyfin'));
+                    setStatus(jf && jf.status === 'running' ? 'running' : 'stopped');
+                }
+            };
+
+            useEffect(() => { checkStatus(); }, []);
+
+            const installJellyfin = async () => {
+                setStatus('installing');
+                await authFetch('/api/docker/containers/create', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: 'aurora-media', template: 'jellyfin' })
+                });
+                setTimeout(checkStatus, 5000);
+            };
+
+            const activeCatData = categories.find(c => c.id === activeCategory);
+
+            return (
+                <div className="animate-fade-in relative h-[calc(100vh-140px)] flex flex-col">
+                    
+                    {/* --- HEADER SECTION --- */}
+                    <div className="flex justify-between items-end mb-8 border-b border-white/5 pb-6">
+                        <div>
+                            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight flex items-center gap-3">
+                                Aurora <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Cinema</span>
+                            </h1>
+                            <p className="text-slate-400 mt-2 font-light tracking-wide flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${status === 'running' ? 'bg-emerald-400 shadow-[0_0_10px_#34d399]' : 'bg-rose-500'}`}></span>
+                                {status === 'running' ? 'MEDIA CORE ONLINE' : 'SYSTEM OFFLINE'}
+                            </p>
+                        </div>
+                        {status === 'running' && (
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowQr(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-sm font-bold text-slate-300">
+                                    <Smartphone size={18} /> MOBILE CONNECT
+                                </button>
+                                <a href={jellyfinUrl} target="_blank" className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-900/40 transition-all hover:scale-105">
+                                    <Play size={18} fill="currentColor" /> LAUNCH PLAYER
+                                </a>
+                            </div>
+                        )}
+                    </div>
+
+                    {status === 'running' ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
+                            
+                            {/* --- LEFT: CATEGORY SELECTOR --- */}
+                            <div className="lg:col-span-1 space-y-3">
+                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Library Access</h3>
+                                {categories.map(cat => (
+                                    <button 
+                                        key={cat.id} 
+                                        onClick={() => setActiveCategory(cat.id)}
+                                        className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all duration-300 group relative overflow-hidden ${activeCategory === cat.id ? `${cat.bg} ${cat.border}` : 'bg-slate-900/40 border-white/5 hover:border-white/10'}`}
+                                    >
+                                        <div className={`p-3 rounded-lg bg-slate-950 ${cat.color} group-hover:scale-110 transition-transform`}>
+                                            <cat.icon size={24} />
+                                        </div>
+                                        <div className="text-left z-10">
+                                            <div className={`font-bold text-lg ${activeCategory === cat.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{cat.label}</div>
+                                            <div className="text-[10px] text-slate-500 uppercase tracking-wider">{cat.id} Library</div>
+                                        </div>
+                                        {activeCategory === cat.id && <div className={`absolute right-0 top-0 bottom-0 w-1 ${cat.color.replace('text-', 'bg-')}`}></div>}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* --- RIGHT: PREVIEW AREA --- */}
+                            <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50 group">
+                                {/* Background Glow */}
+                                <div className={`absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 pointer-events-none transition-colors duration-700 ${activeCatData.bg.replace('/10', '/30').replace('bg-', 'bg-gradient-to-br from-')}`}></div>
+                                
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-10 z-10">
+                                    <div className={`p-6 rounded-full mb-6 ${activeCatData.bg} ${activeCatData.color} shadow-[0_0_50px_rgba(0,0,0,0.5)]`}>
+                                        <activeCatData.icon size={64} strokeWidth={1} />
+                                    </div>
+                                    <h2 className="text-3xl font-bold text-white mb-2">{activeCatData.desc}</h2>
+                                    <p className="text-slate-400 max-w-md mx-auto mb-8">
+                                        Stream your personal {activeCatData.label.toLowerCase()} collection directly from Aurora Storage to any device in your network.
+                                    </p>
+                                    <a href={jellyfinUrl} target="_blank" className="px-8 py-3 rounded-full border border-white/20 hover:bg-white/10 text-white font-bold tracking-widest text-xs transition-all">
+                                        OPEN LIBRARY
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        // --- OFFLINE STATE ---
+                        <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
+                            <div className="p-6 rounded-full bg-slate-800 text-slate-500 mb-4">
+                                <Server size={48} />
+                            </div>
+                            <h2 className="text-xl font-bold text-white mb-2">Media Server is Offline</h2>
+                            <p className="text-slate-400 mb-6 text-sm">Jellyfin container is not running on the Docker Host.</p>
+                            <button onClick={installJellyfin} disabled={status === 'installing'} className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold transition-all">
+                                {status === 'installing' ? 'INITIALIZING...' : 'START MEDIA SERVER'}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* --- QR CODE MODAL --- */}
+                    {showQr && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in p-4" onClick={() => setShowQr(false)}>
+                            <div className="bg-slate-900 border border-white/10 p-8 rounded-2xl shadow-2xl max-w-sm w-full relative" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setShowQr(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20} /></button>
+                                
+                                <div className="text-center">
+                                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-500/10 text-purple-400 mb-4">
+                                        <Smartphone size={24} />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-1">Mobile Connect</h3>
+                                    <p className="text-slate-400 text-xs mb-6">Scan to configure Jellyfin App</p>
+                                    
+                                    <div className="bg-white p-4 rounded-xl mx-auto w-fit shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+                                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(jellyfinUrl)}`} alt="QR" className="w-48 h-48 mix-blend-multiply" />
+                                    </div>
+                                    
+                                    <div className="mt-6 bg-slate-950 p-3 rounded border border-white/5">
+                                        <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Server Address</div>
+                                        <div className="font-mono text-purple-400 text-sm select-all">{jellyfinUrl}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         // --- NEW DOCKER VIEW ---
-// --- UPDATED DOCKER VIEW ---
-        const DockerView = ({ theme, username }) => {
+const DockerView = ({ theme, username }) => {
             const [containers, setContainers] = useState([]);
             const [templates, setTemplates] = useState([]);
             const [loading, setLoading] = useState(false);
             const [createModalOpen, setCreateModalOpen] = useState(false);
             const [newName, setNewName] = useState("");
             const [selectedTemplate, setSelectedTemplate] = useState("");
+            const [showGuide, setShowGuide] = useState(true); // Ny state för att visa/dölja guiden
 
             // Access Control Check
             if (username !== 'aurora') {
@@ -537,7 +689,6 @@
 
             const loadData = async () => {
                 setLoading(true);
-                // Använder authFetch och förväntar sig att huvud-API:et routar /api/docker till docker-tjänsten
                 const cRes = await authFetch('/api/docker/containers');
                 if (cRes && cRes.ok) setContainers(await cRes.json());
                 
@@ -555,18 +706,13 @@
             const handleAction = async (id, action) => {
                 setLoading(true);
                 let res;
-                // Endpoints uppdaterade till /api/docker/...
                 if (action === 'delete') {
                     res = await authFetch(`/api/docker/containers/${id}`, { method: 'DELETE' });
                 } else {
                     res = await authFetch(`/api/docker/containers/${id}/${action}`, { method: 'POST' });
                 }
-                
-                if (res && res.ok) {
-                    await loadData();
-                } else {
-                    alert(`Action ${action} failed. Check console/logs.`);
-                }
+                if (res && res.ok) { await loadData(); } 
+                else { alert(`Action ${action} failed. Check logs.`); }
                 setLoading(false);
             };
 
@@ -577,22 +723,58 @@
                     method: 'POST',
                     body: JSON.stringify({ name: newName, template: selectedTemplate })
                 });
-                
                 if (res && res.ok) {
-                    setCreateModalOpen(false);
-                    setNewName("");
-                    await loadData();
-                } else {
-                    alert("Create failed");
-                }
+                    setCreateModalOpen(false); setNewName(""); await loadData();
+                } else { alert("Create failed"); }
                 setLoading(false);
             };
 
             return (
                 <div className="space-y-6 animate-fade-in">
+                    
+                    {/* --- NY GUIDESKETION START --- */}
+                    {showGuide && (
+                        <div className={`p-5 rounded-xl border ${theme.border} bg-gradient-to-r from-slate-900/80 to-slate-900/40 relative`}>
+                            <button onClick={() => setShowGuide(false)} className="absolute top-3 right-3 text-slate-500 hover:text-white"><X size={16}/></button>
+                            <h3 className="text-sm font-bold text-teal-400 uppercase tracking-wider mb-3 flex items-center gap-2"><Sparkles size={14}/> Container Template Guide</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+                                <div className="flex gap-3 items-start">
+                                    <div className="p-2 bg-blue-500/10 rounded text-blue-400"><Globe size={16}/></div>
+                                    <div>
+                                        <strong className="text-white block mb-0.5">Nginx (Web Server)</strong>
+                                        Används för att hosta statiska hemsidor eller agera proxy. Startar direkt på port 80 (eller slumpad port).
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 items-start">
+                                    <div className="p-2 bg-rose-500/10 rounded text-rose-400"><Database size={16}/></div>
+                                    <div>
+                                        <strong className="text-white block mb-0.5">Redis (Database/Cache)</strong>
+                                        Supersnabb minnesdatabas. Används ofta av andra applikationer för att spara tillfällig data (cache).
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 items-start">
+                                    <div className="p-2 bg-yellow-500/10 rounded text-yellow-400"><Box size={16}/></div>
+                                    <div>
+                                        <strong className="text-white block mb-0.5">Alpine (Minimal Linux)</strong>
+                                        Ett extremt litet Linux-system (ca 5MB). Perfekt för att testa kommandon eller felsöka nätverk.
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 items-start">
+                                    <div className="p-2 bg-emerald-500/10 rounded text-emerald-400"><Code size={16}/></div>
+                                    <div>
+                                        <strong className="text-white block mb-0.5">Python Web App</strong>
+                                        En förkonfigurerad miljö för att köra Python-skript eller enkla webbappar (FastAPI/Flask).
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {/* --- NY GUIDESKETION SLUT --- */}
+
                     <div className="flex justify-between items-center">
-                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><Box className="text-teal-400"/> Containers</h2>
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2"><Box className="text-teal-400"/> Active Containers</h2>
                         <div className="flex gap-2">
+                            <button onClick={() => setShowGuide(!showGuide)} className="p-2 bg-white/5 rounded hover:bg-white/10 text-slate-400" title="Toggle Guide"><Sparkles size={18}/></button>
                             <button onClick={loadData} className="p-2 bg-white/5 rounded hover:bg-white/10"><RotateCcw size={18} className={loading ? "animate-spin" : ""} /></button>
                             <button onClick={() => setCreateModalOpen(true)} className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded font-bold text-sm flex items-center gap-2"><Plus size={16}/> New Container</button>
                         </div>
@@ -616,7 +798,7 @@
                                 </div>
                             </CyberCard>
                         ))}
-                        {containers.length === 0 && !loading && <div className="col-span-full text-center py-10 text-slate-500 italic">No containers found (or API not connected).</div>}
+                        {containers.length === 0 && !loading && <div className="col-span-full text-center py-10 text-slate-500 italic">No containers found.</div>}
                     </div>
 
                     {createModalOpen && (
@@ -1096,10 +1278,10 @@
           );
         };
 
-        const BorealisView = ({ theme, avatar }) => {
+const BorealisView = ({ theme, avatar }) => {
           const [messages, setMessages] = useState([{ id: 1, sender: 'ai', text: 'Greetings. I am Borealis. How can I assist with server operations today?' }]);
           const [input, setInput] = useState("");
-          const scrollRef = useRef(null);
+          const chatContainerRef = useRef(null); // Ändrat: Referens till containern istället för en div
           const [isLoading, setIsLoading] = useState(false);
 
           const sendMessage = async (e) => {
@@ -1112,11 +1294,18 @@
                 else { setTimeout(() => { setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: "I cannot connect to my core logic at the moment. (Simulated Response)" }]); }, 1000); }
             } catch (error) { setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: "Connection Error." }]); } finally { setIsLoading(false); }
           };
-          useEffect(() => { scrollRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isLoading]);
+
+          // Ändrat: Scrollar BARA containern, påverkar inte sidans position
+          useEffect(() => { 
+              if (chatContainerRef.current) {
+                  chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+              }
+          }, [messages, isLoading]);
           
           return (
             <Card title="BOREALIS INTELLIGENCE" icon={Sparkles} className="h-[600px] flex flex-col animate-fade-in" theme={theme}>
-              <div className="flex-1 overflow-y-auto space-y-6 pr-4 mb-4 custom-scrollbar p-2">
+              {/* Ändrat: ref={chatContainerRef} sitter nu på scroll-containern */}
+              <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-6 pr-4 mb-4 custom-scrollbar p-2 scroll-smooth">
                   {messages.map(msg => (
                       <div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                           {msg.sender === 'ai' && <div className="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400 border border-teal-500/30 shrink-0"><Sparkles size={16}/></div>}
@@ -1133,7 +1322,6 @@
                       </div>
                   ))}
                   {isLoading && <div className="flex gap-2 items-center text-xs text-teal-400 ml-12 animate-pulse"><Sparkles size={12}/> Processing query...</div>}
-                  <div ref={scrollRef}></div>
               </div>
               <form onSubmit={sendMessage} className="relative">
                   <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Borealis..." className={`w-full ${theme.inputBg} border ${theme.border} rounded-xl p-4 pr-12 text-sm ${theme.text} focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20 outline-none transition-all shadow-inner`} />
@@ -1372,6 +1560,7 @@
           const [username, setUsername] = useState("Commander"); 
           const [serverUptime, setServerUptime] = useState({ d: 0, h: 0, m: 0 });
           const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '');
+          
 
           useEffect(() => { 
               const timer = setInterval(() => setCurrentTime(new Date()), 1000); 
@@ -1399,6 +1588,7 @@
             { id: 'health', icon: HeartPulse, label: 'Aurora-Health' },
             { id: 'docker', icon: Box, label: 'Docker Manager' },
             { id: 'minecraft', icon: Hammer, label: 'Minecraft' },
+            { id: 'streaming', icon: Play, label: 'Cinema' },
             { id: 'borealis', icon: Sparkles, label: 'Borealis AI' },
             { id: 'storage', icon: Database, label: 'Aurora-Nova' },
             { id: 'settings', icon: Cog, label: 'Settings' }
@@ -1464,6 +1654,7 @@
                 </header>
                 
                 {activeTab === 'neural' && <NeuralView theme={theme} username={username} />}
+                {activeTab === 'streaming' && <StreamingView theme={theme} />}
                 {activeTab === 'telemetry' && <TelemetryView theme={theme} />}
                 {activeTab === 'health' && <HealthView theme={theme} />}
                 {activeTab === 'docker' && <DockerView theme={theme} username={username} />}

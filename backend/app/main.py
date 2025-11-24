@@ -117,7 +117,7 @@ async def root():
 
 from fastapi import APIRouter
 # Importera logiken från docker_service.py som du laddade upp
-from docker_service import list_containers, get_templates, create_container, perform_action
+from .docker_service import list_containers, get_templates, create_container, perform_action
 
 docker_router = APIRouter(prefix="/api/docker", tags=["docker"])
 
