@@ -1,41 +1,56 @@
 name: Deploy Aurora (Self-Hosted)
 
-# Körs när du pushar till main
+# Runs when you push to main
 on:
   push:
     branches: [ main ]
 
 jobs:
   deploy:
-    # VIKTIGT: Detta säger åt GitHub att använda DIN server, inte molnet
+    # IMPORTANT: This tells GitHub to use YOUR self-hosted runner
     runs-on: self-hosted
 
     steps:
-    # 1. Hämta koden från GitHub till runner-mappen på din server
+    # 1. Checkout code from GitHub into the runner folder on your server
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # 2. Flytta filerna lokalt på servern (inga nätverksproblem!)
+    # 2. Move files locally on the server (no network transfers)
     - name: Deploy Files Locally
       run: |
         echo "🚀 Starting Local Deployment..."
         
-        # Flytta Frontend till webb-mappen
-        # Vi använder rsync för att det är snabbt och säkert
+        # --- 1. FRONTEND ---
         echo "📂 Updating Frontend..."
         sudo rsync -av --delete ./frontend/ /var/www/aurora/
         
-        # Flytta Backend till app-mappen
+        # --- 2. BACKEND (Main application) ---
         echo "🐍 Updating Backend..."
-        # Lägg till --delete för att rensa bort skräpfiler på servern
+        # Ensure target directory exists
+        mkdir -p /home/aurora/aurora/backend
         rsync -av --delete --exclude='AURORA_CLOUD' --exclude='.venv' --exclude='__pycache__' ./backend/ /home/aurora/aurora/backend/
         
-        # Installera nya python-paket om det behövs
-        echo "📦 Checking dependencies..."
+        # Install new Python packages if needed
+        echo "📦 Checking backend dependencies..."
         source /home/aurora/aurora/.venv/bin/activate
-        pip install -r ./backend/requirements.txt
+        pip install -r /home/aurora/aurora/backend/requirements.txt
         
-        # Starta om tjänsten
+        # --- 3. DOCKER MANAGER (New Service) ---
+        echo "🐳 Updating Docker Manager..."
+        # Create directory if it doesn't exist
+        mkdir -p /home/aurora/aurora/docker_manager
+        
+        # Sync files for Docker Manager
+        rsync -av --delete ./docker_manager/ /home/aurora/aurora/docker_manager/
+        
+        # Change into the directory and restart the container
+        cd /home/aurora/aurora/docker_manager
+        
+        # Stop, rebuild and run in the background
+        # (Requires the runner user to be in the 'docker' group, otherwise use sudo)
+        docker-compose up -d --build --remove-orphans
+        
+        # --- 4. RESTART MAIN SERVICE ---
         echo "🔄 Restarting Aurora Service..."
         sudo systemctl restart aurora
         
