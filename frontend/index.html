@@ -20,18 +20,13 @@
     
     <!-- Import Map -->
     <script type="importmap">
-import React, { useState, useEffect, useRef } from 'react';
-        import ReactDOM from 'react-dom/client';
-        import { 
-          Terminal, Activity, Shield, Cpu, Wifi, Database, Lock, Menu, X, Radio, 
-          Zap, Globe, Cloud, Sun, CloudRain, Wind, MessageSquare, Server, 
-          Table, User, Save, Trash2, Edit2, Play, Square, HardDrive, FileText, Image as ImageIcon,
-          Calendar, ChevronLeft, ChevronRight, Plus, Check, Thermometer, Clock, ArrowUp, ArrowDown,
-          Folder, Download, Upload, CornerLeftUp, Music, Video, File, PenTool, Hash, TrendingUp, LogOut,
-          MemoryStick, Disc, ShieldCheck, Brain, Moon, Bell, MapPin, CheckCircle, RotateCcw, Users, Settings,
-          Home, Hammer, Cog, Sparkles, Layers, PlugZap, DollarSign, Camera, HeartPulse, Search, Filter, Box, 
-          LockKeyhole, CloudLightning, CloudSnow, AlertTriangle, Smartphone, Film, Tv
-        } from 'lucide-react';
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?deps=react@18.2.0",
+            "lucide-react": "https://esm.sh/lucide-react@0.460.0?deps=react@18.2.0"
+        }
+    }
     </script>
 
     <!-- Babel -->
@@ -58,6 +53,9 @@ import React, { useState, useEffect, useRef } from 'react';
         /* Typography Classes */
         .font-cybero { font-family: 'Orbitron', sans-serif; letter-spacing: 0.05em; }
         .font-mono-logs { font-family: 'VT323', monospace; }
+        
+        /* Smooth Scroll */
+        .scroll-smooth { scroll-behavior: smooth; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200 overflow-hidden selection:bg-teal-500/30 selection:text-teal-100">
@@ -67,6 +65,7 @@ import React, { useState, useEffect, useRef } from 'react';
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useRef } from 'react';
         import ReactDOM from 'react-dom/client';
+        // IMPORTERAR ALLA IKONER SOM BEHÖVS (INKLUSIVE NYA FILM, TV, SMARTPHONE)
         import { 
           Terminal, Activity, Shield, Cpu, Wifi, Database, Lock, Menu, X, Radio, 
           Zap, Globe, Cloud, Sun, CloudRain, Wind, MessageSquare, Server, 
@@ -74,7 +73,8 @@ import React, { useState, useEffect, useRef } from 'react';
           Calendar, ChevronLeft, ChevronRight, Plus, Check, Thermometer, Clock, ArrowUp, ArrowDown,
           Folder, Download, Upload, CornerLeftUp, Music, Video, File, PenTool, Hash, TrendingUp, LogOut,
           MemoryStick, Disc, ShieldCheck, Brain, Moon, Bell, MapPin, CheckCircle, RotateCcw, Users, Settings,
-          Home, Hammer, Cog, Sparkles, Layers, PlugZap, DollarSign, Camera, HeartPulse, Search, Filter, Box, LockKeyhole, CloudLightning, CloudSnow, AlertTriangle
+          Home, Hammer, Cog, Sparkles, Layers, PlugZap, DollarSign, Camera, HeartPulse, Search, Filter, Box, 
+          LockKeyhole, CloudLightning, CloudSnow, AlertTriangle, Smartphone, Film, Tv, Code
         } from 'lucide-react';
 
         // --- 1. HELPERS & UTILS ---
@@ -241,25 +241,17 @@ import React, { useState, useEffect, useRef } from 'react';
                 return () => clearInterval(timer);
             }, []);
 
-            // Calculate degrees
             const secDeg = (time.getSeconds() / 60) * 360;
             const minDeg = (time.getMinutes() / 60) * 360 + (time.getSeconds() / 60) * 6;
             const hourDeg = (time.getHours() / 12) * 360 + (time.getMinutes() / 60) * 30;
 
             return (
                 <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
-                    {/* Outer Glow Ring */}
                     <div className="absolute inset-0 rounded-full border border-orange-500/30 shadow-[0_0_30px_rgba(249,115,22,0.4)] animate-pulse"></div>
-                    
-                    {/* Inner Clock Face */}
                     <div className="w-28 h-28 md:w-36 md:h-36 rounded-full bg-black/60 border border-orange-500/20 relative shadow-inner flex items-center justify-center backdrop-blur-sm">
-                        {/* Center Dot */}
                         <div className="w-2 h-2 bg-orange-400 rounded-full z-20 shadow-[0_0_10px_rgba(249,115,22,1)]"></div>
-
-                        {/* Hands */}
                         <div className="absolute w-[3px] h-[35px] md:h-[45px] bg-orange-600/80 origin-bottom bottom-1/2 left-[calc(50%-1.5px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(234,88,12,0.5)]" style={{ transform: `rotate(${hourDeg}deg)` }}></div>
                         <div className="absolute w-[2px] h-[45px] md:h-[55px] bg-orange-500/90 origin-bottom bottom-1/2 left-[calc(50%-1px)] rounded-full z-10 transition-transform duration-1000 ease-linear shadow-[0_0_5px_rgba(249,115,22,0.5)]" style={{ transform: `rotate(${minDeg}deg)` }}></div>
-                        {/* Second Hand - Brighter, Thinner */}
                         <div className="absolute w-[1px] h-[50px] md:h-[60px] bg-orange-300 origin-bottom bottom-1/2 left-[calc(50%-0.5px)] z-10 shadow-[0_0_8px_rgba(253,186,116,0.9)] transition-transform duration-200 ease-out" style={{ transform: `rotate(${secDeg}deg)` }}></div>
                     </div>
                 </div>
@@ -289,7 +281,6 @@ import React, { useState, useEffect, useRef } from 'react';
 
         const Sparkline = ({ data, color = "#2dd4bf", height = 60 }) => {
           if (!data || data.length === 0) return null;
-          // FIX: Dynamisk max så även låg trafik syns. Minst 1 dock för att undvika div/0.
           const max = Math.max(Math.max(...data), 1); 
           const width = 100; 
           const points = data.map((val, i) => {
@@ -380,9 +371,7 @@ import React, { useState, useEffect, useRef } from 'react';
         };
 
         const WeatherVisuals = ({ condition, className = "" }) => {
-            // Animerade väder-ikoner
             const is = (str) => condition.toLowerCase().includes(str);
-            
             return (
                 <div className={`relative w-full h-full flex items-center justify-center pointer-events-none ${className}`}>
                   {is('sunny') || is('clear') ? (
@@ -456,56 +445,27 @@ import React, { useState, useEffect, useRef } from 'react';
 
         // --- 5. VIEWS ---
         
-        // --- NEW: CPU CORE VISUALIZER ---
         const CpuCoreVisuals = ({ cores }) => {
             if (!cores || cores.length === 0) return <div className="text-slate-500">Initializing Neural Core...</div>;
-            
-            const centerX = 150;
-            const centerY = 150;
-            const radius = 100;
-            const angleStep = (2 * Math.PI) / cores.length;
-
+            const centerX = 150; const centerY = 150; const radius = 100; const angleStep = (2 * Math.PI) / cores.length;
             return (
                 <div className="relative w-full h-[320px] flex items-center justify-center">
                     <svg width="300" height="300" viewBox="0 0 300 300" className="overflow-visible">
-                        {/* Central CPU Chip */}
                         <g transform={`translate(${centerX - 24}, ${centerY - 24})`}>
                             <rect x="0" y="0" width="48" height="48" rx="8" fill="#0f172a" stroke="#2dd4bf" strokeWidth="2" className="animate-pulse" />
                             <path d="M12 12h24v24h-24z" fill="#2dd4bf" fillOpacity="0.2" />
                             <Cpu size={32} className="text-teal-400" x="8" y="8" />
                         </g>
-
-                        {/* Connections and Nodes */}
                         {cores.map((core, i) => {
-                            const angle = i * angleStep - Math.PI / 2; // Start at top
-                            const x = centerX + radius * Math.cos(angle);
-                            const y = centerY + radius * Math.sin(angle);
-                            const isHot = core.temp > 80;
-                            const isHeavy = core.load > 80;
-                            const lineColor = isHot ? '#f43f5e' : isHeavy ? '#fbbf24' : '#2dd4bf';
-
+                            const angle = i * angleStep - Math.PI / 2; const x = centerX + radius * Math.cos(angle); const y = centerY + radius * Math.sin(angle);
+                            const isHot = core.temp > 80; const isHeavy = core.load > 80; const lineColor = isHot ? '#f43f5e' : isHeavy ? '#fbbf24' : '#2dd4bf';
                             return (
                                 <g key={core.id}>
-                                    {/* Connection Line */}
-                                    <line 
-                                        x1={centerX} y1={centerY} 
-                                        x2={x} y2={y} 
-                                        stroke={lineColor} 
-                                        strokeWidth={core.load > 50 ? 2 : 1} 
-                                        strokeOpacity="0.4"
-                                        strokeDasharray="4"
-                                        className={core.load > 50 ? "animate-[dash_1s_linear_infinite]" : ""}
-                                    />
-                                    
-                                    {/* Core Node Container (ForeignObject for HTML content in SVG) */}
+                                    <line x1={centerX} y1={centerY} x2={x} y2={y} stroke={lineColor} strokeWidth={core.load > 50 ? 2 : 1} strokeOpacity="0.4" strokeDasharray="4" className={core.load > 50 ? "animate-[dash_1s_linear_infinite]" : ""} />
                                     <foreignObject x={x - 40} y={y - 25} width="80" height="50">
                                         <div className={`flex flex-col items-center justify-center p-1 rounded border bg-slate-950/90 backdrop-blur ${isHot ? 'border-rose-500 text-rose-400' : 'border-teal-500/30 text-teal-300'} text-[10px] shadow-lg`}>
                                             <div className="font-bold tracking-wider">CORE {core.id}</div>
-                                            <div className="flex gap-2 mt-0.5">
-                                                <span className={isHeavy ? 'text-amber-400 font-bold' : 'text-slate-400'}>{Math.round(core.load)}%</span>
-                                                <span className="text-slate-500">|</span>
-                                                <span className={isHot ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{Math.round(core.temp)}°C</span>
-                                            </div>
+                                            <div className="flex gap-2 mt-0.5"><span className={isHeavy ? 'text-amber-400 font-bold' : 'text-slate-400'}>{Math.round(core.load)}%</span><span className="text-slate-500">|</span><span className={isHot ? 'text-rose-400 font-bold' : 'text-emerald-400'}>{Math.round(core.temp)}°C</span></div>
                                         </div>
                                     </foreignObject>
                                 </g>
@@ -516,175 +476,19 @@ import React, { useState, useEffect, useRef } from 'react';
             );
         };
 
-const StreamingView = ({ theme }) => {
-            const [status, setStatus] = useState('unknown');
-            const [showQr, setShowQr] = useState(false);
-            const [activeCategory, setActiveCategory] = useState('movies');
-            
-            // Hämta IP och bygg URL
-            const serverIp = window.location.hostname;
-            const jellyfinPort = 8096;
-            const jellyfinUrl = `http://${serverIp}:${jellyfinPort}`;
-
-            // Kategorier för "Media Hub"
-            const categories = [
-                { id: 'movies', label: 'Movies', icon: Film, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', desc: '4K HDR Cinema Collection' },
-                { id: 'tv', label: 'TV Shows', icon: Tv, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', desc: 'Binge-worthy Series' },
-                { id: 'music', label: 'Music', icon: Music, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20', desc: 'Lossless Audio Library' },
-                { id: 'photos', label: 'Photos', icon: ImageIcon, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'Memories & Albums' }
-            ];
-
-            const checkStatus = async () => {
-                const res = await authFetch('/api/docker/containers');
-                if (res && res.ok) {
-                    const containers = await res.json();
-                    const jf = containers.find(c => c.image.includes('jellyfin'));
-                    setStatus(jf && jf.status === 'running' ? 'running' : 'stopped');
-                }
-            };
-
-            useEffect(() => { checkStatus(); }, []);
-
-            const installJellyfin = async () => {
-                setStatus('installing');
-                await authFetch('/api/docker/containers/create', {
-                    method: 'POST',
-                    body: JSON.stringify({ name: 'aurora-media', template: 'jellyfin' })
-                });
-                setTimeout(checkStatus, 5000);
-            };
-
-            const activeCatData = categories.find(c => c.id === activeCategory);
-
-            return (
-                <div className="animate-fade-in relative h-[calc(100vh-140px)] flex flex-col">
-                    
-                    {/* --- HEADER SECTION --- */}
-                    <div className="flex justify-between items-end mb-8 border-b border-white/5 pb-6">
-                        <div>
-                            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight flex items-center gap-3">
-                                Aurora <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Cinema</span>
-                            </h1>
-                            <p className="text-slate-400 mt-2 font-light tracking-wide flex items-center gap-2">
-                                <span className={`w-2 h-2 rounded-full ${status === 'running' ? 'bg-emerald-400 shadow-[0_0_10px_#34d399]' : 'bg-rose-500'}`}></span>
-                                {status === 'running' ? 'MEDIA CORE ONLINE' : 'SYSTEM OFFLINE'}
-                            </p>
-                        </div>
-                        {status === 'running' && (
-                            <div className="flex gap-3">
-                                <button onClick={() => setShowQr(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-sm font-bold text-slate-300">
-                                    <Smartphone size={18} /> MOBILE CONNECT
-                                </button>
-                                <a href={jellyfinUrl} target="_blank" className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-900/40 transition-all hover:scale-105">
-                                    <Play size={18} fill="currentColor" /> LAUNCH PLAYER
-                                </a>
-                            </div>
-                        )}
-                    </div>
-
-                    {status === 'running' ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
-                            
-                            {/* --- LEFT: CATEGORY SELECTOR --- */}
-                            <div className="lg:col-span-1 space-y-3">
-                                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Library Access</h3>
-                                {categories.map(cat => (
-                                    <button 
-                                        key={cat.id} 
-                                        onClick={() => setActiveCategory(cat.id)}
-                                        className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all duration-300 group relative overflow-hidden ${activeCategory === cat.id ? `${cat.bg} ${cat.border}` : 'bg-slate-900/40 border-white/5 hover:border-white/10'}`}
-                                    >
-                                        <div className={`p-3 rounded-lg bg-slate-950 ${cat.color} group-hover:scale-110 transition-transform`}>
-                                            <cat.icon size={24} />
-                                        </div>
-                                        <div className="text-left z-10">
-                                            <div className={`font-bold text-lg ${activeCategory === cat.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{cat.label}</div>
-                                            <div className="text-[10px] text-slate-500 uppercase tracking-wider">{cat.id} Library</div>
-                                        </div>
-                                        {activeCategory === cat.id && <div className={`absolute right-0 top-0 bottom-0 w-1 ${cat.color.replace('text-', 'bg-')}`}></div>}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* --- RIGHT: PREVIEW AREA --- */}
-                            <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50 group">
-                                {/* Background Glow */}
-                                <div className={`absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 pointer-events-none transition-colors duration-700 ${activeCatData.bg.replace('/10', '/30').replace('bg-', 'bg-gradient-to-br from-')}`}></div>
-                                
-                                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-10 z-10">
-                                    <div className={`p-6 rounded-full mb-6 ${activeCatData.bg} ${activeCatData.color} shadow-[0_0_50px_rgba(0,0,0,0.5)]`}>
-                                        <activeCatData.icon size={64} strokeWidth={1} />
-                                    </div>
-                                    <h2 className="text-3xl font-bold text-white mb-2">{activeCatData.desc}</h2>
-                                    <p className="text-slate-400 max-w-md mx-auto mb-8">
-                                        Stream your personal {activeCatData.label.toLowerCase()} collection directly from Aurora Storage to any device in your network.
-                                    </p>
-                                    <a href={jellyfinUrl} target="_blank" className="px-8 py-3 rounded-full border border-white/20 hover:bg-white/10 text-white font-bold tracking-widest text-xs transition-all">
-                                        OPEN LIBRARY
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        // --- OFFLINE STATE ---
-                        <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
-                            <div className="p-6 rounded-full bg-slate-800 text-slate-500 mb-4">
-                                <Server size={48} />
-                            </div>
-                            <h2 className="text-xl font-bold text-white mb-2">Media Server is Offline</h2>
-                            <p className="text-slate-400 mb-6 text-sm">Jellyfin container is not running on the Docker Host.</p>
-                            <button onClick={installJellyfin} disabled={status === 'installing'} className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold transition-all">
-                                {status === 'installing' ? 'INITIALIZING...' : 'START MEDIA SERVER'}
-                            </button>
-                        </div>
-                    )}
-
-                    {/* --- QR CODE MODAL --- */}
-                    {showQr && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in p-4" onClick={() => setShowQr(false)}>
-                            <div className="bg-slate-900 border border-white/10 p-8 rounded-2xl shadow-2xl max-w-sm w-full relative" onClick={e => e.stopPropagation()}>
-                                <button onClick={() => setShowQr(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20} /></button>
-                                
-                                <div className="text-center">
-                                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-500/10 text-purple-400 mb-4">
-                                        <Smartphone size={24} />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-white mb-1">Mobile Connect</h3>
-                                    <p className="text-slate-400 text-xs mb-6">Scan to configure Jellyfin App</p>
-                                    
-                                    <div className="bg-white p-4 rounded-xl mx-auto w-fit shadow-[0_0_30px_rgba(168,85,247,0.2)]">
-                                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(jellyfinUrl)}`} alt="QR" className="w-48 h-48 mix-blend-multiply" />
-                                    </div>
-                                    
-                                    <div className="mt-6 bg-slate-950 p-3 rounded border border-white/5">
-                                        <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Server Address</div>
-                                        <div className="font-mono text-purple-400 text-sm select-all">{jellyfinUrl}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        // --- NEW DOCKER VIEW ---
-const DockerView = ({ theme, username }) => {
+        const DockerView = ({ theme, username }) => {
             const [containers, setContainers] = useState([]);
             const [templates, setTemplates] = useState([]);
             const [loading, setLoading] = useState(false);
             const [createModalOpen, setCreateModalOpen] = useState(false);
             const [newName, setNewName] = useState("");
             const [selectedTemplate, setSelectedTemplate] = useState("");
-            const [showGuide, setShowGuide] = useState(true); // Ny state för att visa/dölja guiden
+            const [showGuide, setShowGuide] = useState(true);
 
-            // Access Control Check
             if (username !== 'aurora') {
                 return (
                     <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 animate-fade-in">
-                        <div className="p-6 rounded-full bg-rose-500/10 border border-rose-500/20 mb-4">
-                            <LockKeyhole size={48} className="text-rose-500" />
-                        </div>
+                        <div className="p-6 rounded-full bg-rose-500/10 border border-rose-500/20 mb-4"><LockKeyhole size={48} className="text-rose-500" /></div>
                         <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
                         <p className="text-sm">User <span className="text-teal-400 font-mono font-bold">{username}</span> is not authorized to manage containers.</p>
                         <p className="text-xs mt-2 text-slate-600">Contact system administrator for elevation.</p>
@@ -696,90 +500,52 @@ const DockerView = ({ theme, username }) => {
                 setLoading(true);
                 const cRes = await authFetch('/api/docker/containers');
                 if (cRes && cRes.ok) setContainers(await cRes.json());
-                
                 const tRes = await authFetch('/api/docker/templates');
                 if (tRes && tRes.ok) {
-                    const tData = await tRes.json();
-                    setTemplates(tData);
+                    const tData = await tRes.json(); setTemplates(tData);
                     if(tData.length > 0) setSelectedTemplate(tData[0].name);
                 }
                 setLoading(false);
             };
-
             useEffect(() => { loadData(); }, []);
 
             const handleAction = async (id, action) => {
                 setLoading(true);
                 let res;
-                if (action === 'delete') {
-                    res = await authFetch(`/api/docker/containers/${id}`, { method: 'DELETE' });
-                } else {
-                    res = await authFetch(`/api/docker/containers/${id}/${action}`, { method: 'POST' });
-                }
-                if (res && res.ok) { await loadData(); } 
-                else { alert(`Action ${action} failed. Check logs.`); }
+                if (action === 'delete') res = await authFetch(`/api/docker/containers/${id}`, { method: 'DELETE' });
+                else res = await authFetch(`/api/docker/containers/${id}/${action}`, { method: 'POST' });
+                if (res && res.ok) await loadData(); else alert(`Action ${action} failed.`);
                 setLoading(false);
             };
 
             const handleCreate = async () => {
                 if (!newName) return;
                 setLoading(true);
-                const res = await authFetch('/api/docker/containers/create', {
-                    method: 'POST',
-                    body: JSON.stringify({ name: newName, template: selectedTemplate })
-                });
-                if (res && res.ok) {
-                    setCreateModalOpen(false); setNewName(""); await loadData();
-                } else { alert("Create failed"); }
+                const res = await authFetch('/api/docker/containers/create', { method: 'POST', body: JSON.stringify({ name: newName, template: selectedTemplate }) });
+                if (res && res.ok) { setCreateModalOpen(false); setNewName(""); await loadData(); } else { alert("Create failed"); }
                 setLoading(false);
             };
 
             return (
                 <div className="space-y-6 animate-fade-in">
-                    
-                    {/* --- NY GUIDESKETION START --- */}
                     {showGuide && (
                         <div className={`p-5 rounded-xl border ${theme.border} bg-gradient-to-r from-slate-900/80 to-slate-900/40 relative`}>
                             <button onClick={() => setShowGuide(false)} className="absolute top-3 right-3 text-slate-500 hover:text-white"><X size={16}/></button>
                             <h3 className="text-sm font-bold text-teal-400 uppercase tracking-wider mb-3 flex items-center gap-2"><Sparkles size={14}/> Container Template Guide</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
-                                <div className="flex gap-3 items-start">
-                                    <div className="p-2 bg-blue-500/10 rounded text-blue-400"><Globe size={16}/></div>
-                                    <div>
-                                        <strong className="text-white block mb-0.5">Nginx (Web Server)</strong>
-                                        Används för att hosta statiska hemsidor eller agera proxy. Startar direkt på port 80 (eller slumpad port).
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 items-start">
-                                    <div className="p-2 bg-rose-500/10 rounded text-rose-400"><Database size={16}/></div>
-                                    <div>
-                                        <strong className="text-white block mb-0.5">Redis (Database/Cache)</strong>
-                                        Supersnabb minnesdatabas. Används ofta av andra applikationer för att spara tillfällig data (cache).
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 items-start">
-                                    <div className="p-2 bg-yellow-500/10 rounded text-yellow-400"><Box size={16}/></div>
-                                    <div>
-                                        <strong className="text-white block mb-0.5">Alpine (Minimal Linux)</strong>
-                                        Ett extremt litet Linux-system (ca 5MB). Perfekt för att testa kommandon eller felsöka nätverk.
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 items-start">
-                                    <div className="p-2 bg-emerald-500/10 rounded text-emerald-400"><Code size={16}/></div>
-                                    <div>
-                                        <strong className="text-white block mb-0.5">Python Web App</strong>
-                                        En förkonfigurerad miljö för att köra Python-skript eller enkla webbappar (FastAPI/Flask).
-                                    </div>
-                                </div>
+                                <div className="flex gap-3 items-start"><div className="p-2 bg-blue-500/10 rounded text-blue-400"><Globe size={16}/></div><div><strong className="text-white block mb-0.5">Nginx (Web Server)</strong>Host static sites/proxy. Port 80.</div></div>
+                                <div className="flex gap-3 items-start"><div className="p-2 bg-rose-500/10 rounded text-rose-400"><Database size={16}/></div><div><strong className="text-white block mb-0.5">Redis (Cache)</strong>Fast in-memory database. Port 6379.</div></div>
+                                <div className="flex gap-3 items-start"><div className="p-2 bg-yellow-500/10 rounded text-yellow-400"><Box size={16}/></div><div><strong className="text-white block mb-0.5">Alpine (Minimal)</strong>Tiny Linux distro for testing.</div></div>
+                                <div className="flex gap-3 items-start"><div className="p-2 bg-emerald-500/10 rounded text-emerald-400"><Code size={16}/></div><div><strong className="text-white block mb-0.5">Python Web App</strong>Python 3.9 + HTTP server on 8000.</div></div>
+                                <div className="flex gap-3 items-start"><div className="p-2 bg-purple-500/10 rounded text-purple-400"><Play size={16}/></div><div><strong className="text-white block mb-0.5">Jellyfin</strong>Media Server. Port 8096.</div></div>
                             </div>
                         </div>
                     )}
-                    {/* --- NY GUIDESKETION SLUT --- */}
 
                     <div className="flex justify-between items-center">
                         <h2 className="text-xl font-bold text-white flex items-center gap-2"><Box className="text-teal-400"/> Active Containers</h2>
                         <div className="flex gap-2">
-                            <button onClick={() => setShowGuide(!showGuide)} className="p-2 bg-white/5 rounded hover:bg-white/10 text-slate-400" title="Toggle Guide"><Sparkles size={18}/></button>
+                            <button onClick={() => setShowGuide(!showGuide)} className="p-2 bg-white/5 rounded hover:bg-white/10 text-slate-400"><Sparkles size={18}/></button>
                             <button onClick={loadData} className="p-2 bg-white/5 rounded hover:bg-white/10"><RotateCcw size={18} className={loading ? "animate-spin" : ""} /></button>
                             <button onClick={() => setCreateModalOpen(true)} className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded font-bold text-sm flex items-center gap-2"><Plus size={16}/> New Container</button>
                         </div>
@@ -789,10 +555,7 @@ const DockerView = ({ theme, username }) => {
                         {containers.map(c => (
                             <CyberCard key={c.id} className="flex flex-col gap-3">
                                 <div className="flex justify-between items-start border-b border-white/5 pb-3">
-                                    <div>
-                                        <div className="font-bold text-lg text-white flex items-center gap-2">{c.name}</div>
-                                        <div className="text-xs text-slate-500 font-mono">{c.image}</div>
-                                    </div>
+                                    <div><div className="font-bold text-lg text-white flex items-center gap-2">{c.name}</div><div className="text-xs text-slate-500 font-mono">{c.image}</div></div>
                                     <div className={`px-2 py-1 rounded text-xs font-bold uppercase ${c.status === 'running' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>{c.status}</div>
                                 </div>
                                 <div className="text-xs text-slate-400 font-mono">ID: {c.short_id}</div>
@@ -810,20 +573,9 @@ const DockerView = ({ theme, username }) => {
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
                             <Card title="Create Container" icon={Box} theme={theme} className="w-full max-w-md bg-slate-900">
                                 <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1">Name</label>
-                                        <input type="text" value={newName} onChange={e => setNewName(e.target.value)} className={`w-full ${theme.inputBg} border ${theme.border} rounded p-2 text-white outline-none focus:border-teal-500`} placeholder="my-container" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 mb-1">Template</label>
-                                        <select value={selectedTemplate} onChange={e => setSelectedTemplate(e.target.value)} className={`w-full ${theme.inputBg} border ${theme.border} rounded p-2 text-white outline-none focus:border-teal-500 bg-slate-900`}>
-                                            {templates.map(t => <option key={t.name} value={t.name}>{t.name} ({t.image})</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="flex justify-end gap-2 pt-4">
-                                        <button onClick={() => setCreateModalOpen(false)} className="px-4 py-2 hover:bg-white/10 rounded text-slate-400 text-sm">Cancel</button>
-                                        <button onClick={handleCreate} disabled={loading} className="px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded font-bold text-sm">Create</button>
-                                    </div>
+                                    <div><label className="block text-xs font-bold text-slate-500 mb-1">Name</label><input type="text" value={newName} onChange={e => setNewName(e.target.value)} className={`w-full ${theme.inputBg} border ${theme.border} rounded p-2 text-white outline-none focus:border-teal-500`} placeholder="my-container" /></div>
+                                    <div><label className="block text-xs font-bold text-slate-500 mb-1">Template</label><select value={selectedTemplate} onChange={e => setSelectedTemplate(e.target.value)} className={`w-full ${theme.inputBg} border ${theme.border} rounded p-2 text-white outline-none focus:border-teal-500 bg-slate-900`}>{templates.map(t => <option key={t.name} value={t.name}>{t.name} ({t.image})</option>)}</select></div>
+                                    <div className="flex justify-end gap-2 pt-4"><button onClick={() => setCreateModalOpen(false)} className="px-4 py-2 hover:bg-white/10 rounded text-slate-400 text-sm">Cancel</button><button onClick={handleCreate} disabled={loading} className="px-6 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded font-bold text-sm">Create</button></div>
                                 </div>
                             </Card>
                         </div>
@@ -838,346 +590,122 @@ const DockerView = ({ theme, username }) => {
             const [logs, setLogs] = useState([]);
             const [loading, setLoading] = useState(false);
             const logEndRef = useRef(null);
-
-            const sources = [
-                { id: 'system', label: 'System (Journal)', icon: Server },
-                { id: 'nginx', label: 'Nginx Web', icon: Globe },
-                { id: 'docker', label: 'Docker Containers', icon: Layers },
-                { id: 'api', label: 'API / Backend', icon: Activity }
-            ];
-
+            const sources = [{ id: 'system', label: 'System (Journal)', icon: Server }, { id: 'nginx', label: 'Nginx Web', icon: Globe }, { id: 'docker', label: 'Docker Containers', icon: Layers }, { id: 'api', label: 'API / Backend', icon: Activity }];
             const fetchLogs = async () => {
                 setLoading(true);
                 const query = new URLSearchParams({ lines: 50, filter: filter }).toString();
                 const res = await authFetch(`/api/health/logs/${source}?${query}`);
-                if(res && res.ok) {
-                    const data = await res.json();
-                    setLogs(data.logs || []);
-                } else {
-                    setLogs(["Error fetching logs."]);
-                }
+                if(res && res.ok) { const data = await res.json(); setLogs(data.logs || []); } else { setLogs(["Error fetching logs."]); }
                 setLoading(false);
             };
-
             useEffect(() => { fetchLogs(); }, [source]); 
             useEffect(() => { if(logEndRef.current) logEndRef.current.scrollTop = logEndRef.current.scrollHeight; }, [logs]);
 
             return (
                 <div className="animate-fade-in grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-180px)]">
                     <Card title="Log Source" icon={HeartPulse} theme={theme} className="h-full col-span-1">
-                        <div className="space-y-2">
-                            {sources.map(s => (
-                                <button key={s.id} onClick={() => setSource(s.id)} className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${source === s.id ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'text-slate-400 hover:bg-white/5'}`}>
-                                    <s.icon size={18} />
-                                    <span className="text-sm font-bold">{s.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="mt-8 pt-8 border-t border-white/5">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Filter Logs</label>
-                            <div className="relative">
-                                <input type="text" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && fetchLogs()} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 pl-9 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="Search..." />
-                                <Search className="absolute left-3 top-3.5 text-slate-500" size={14} />
-                            </div>
-                            <button onClick={fetchLogs} className="w-full mt-4 bg-teal-600 hover:bg-teal-500 text-white py-2 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2">
-                                {loading ? <RotateCcw className="animate-spin" size={14} /> : <Filter size={14} />} Refresh Logs
-                            </button>
-                        </div>
+                        <div className="space-y-2">{sources.map(s => (<button key={s.id} onClick={() => setSource(s.id)} className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${source === s.id ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'text-slate-400 hover:bg-white/5'}`}><s.icon size={18} /><span className="text-sm font-bold">{s.label}</span></button>))}</div>
+                        <div className="mt-8 pt-8 border-t border-white/5"><label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Filter Logs</label><div className="relative"><input type="text" value={filter} onChange={(e) => setFilter(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && fetchLogs()} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 pl-9 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="Search..." /><Search className="absolute left-3 top-3.5 text-slate-500" size={14} /></div><button onClick={fetchLogs} className="w-full mt-4 bg-teal-600 hover:bg-teal-500 text-white py-2 rounded-lg font-bold text-sm transition-colors flex items-center justify-center gap-2">{loading ? <RotateCcw className="animate-spin" size={14} /> : <Filter size={14} />} Refresh Logs</button></div>
                     </Card>
-                    
-                    <div className="col-span-3 h-full flex flex-col bg-[#0c0c12] rounded-2xl border border-white/5 overflow-hidden shadow-inner relative">
-                        <div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5">
-                            <div className="text-xs font-mono-logs text-teal-400 flex items-center gap-2"><Terminal size={12} /> /var/log/{source}.log</div>
-                            <div className="text-xs text-slate-500">{logs.length} lines</div>
-                        </div>
-                        <div ref={logEndRef} className="flex-1 overflow-y-auto p-4 font-mono-logs text-xs space-y-1 custom-scrollbar">
-                            {logs.map((line, i) => (
-                                <div key={i} className="text-slate-300 hover:bg-white/5 hover:text-white px-1 py-0.5 break-all border-l-2 border-transparent hover:border-teal-500/50">
-                                    {line}
-                                </div>
-                            ))}
-                            {logs.length === 0 && !loading && <div className="text-slate-600 italic text-center mt-10">No logs found matching criteria.</div>}
-                            {loading && <div className="text-teal-500 animate-pulse text-center mt-10">Streaming log data...</div>}
-                        </div>
-                    </div>
+                    <div className="col-span-3 h-full flex flex-col bg-[#0c0c12] rounded-2xl border border-white/5 overflow-hidden shadow-inner relative"><div className="bg-white/5 px-4 py-2 flex items-center justify-between border-b border-white/5"><div className="text-xs font-mono-logs text-teal-400 flex items-center gap-2"><Terminal size={12} /> /var/log/{source}.log</div><div className="text-xs text-slate-500">{logs.length} lines</div></div><div ref={logEndRef} className="flex-1 overflow-y-auto p-4 font-mono-logs text-xs space-y-1 custom-scrollbar">{logs.map((line, i) => (<div key={i} className="text-slate-300 hover:bg-white/5 hover:text-white px-1 py-0.5 break-all border-l-2 border-transparent hover:border-teal-500/50">{line}</div>))}{logs.length === 0 && !loading && <div className="text-slate-600 italic text-center mt-10">No logs found matching criteria.</div>}{loading && <div className="text-teal-500 animate-pulse text-center mt-10">Streaming log data...</div>}</div></div>
                 </div>
             );
         };
 
         const TelemetryView = ({ theme }) => {
-          const [cpuLoad, setCpuLoad] = useState(0);
-          const [cpuTemp, setCpuTemp] = useState(0);
-          const [ramUsed, setRamUsed] = useState(0);
-          const [ramTotal, setRamTotal] = useState(0);
-          const [diskUsed, setDiskUsed] = useState(0);
-          const [diskTotal, setDiskTotal] = useState(0);
-          const [cpuHistory, setCpuHistory] = useState(Array(30).fill(0));
-          const [netDownHistory, setNetDownHistory] = useState(Array(30).fill(0));
-          const [netUpHistory, setNetUpHistory] = useState(Array(30).fill(0));
-          const [netDownSpeed, setNetDownSpeed] = useState(0);
-          const [netUpSpeed, setNetUpSpeed] = useState(0);
-          const lastNetStats = useRef({ recv: 0, sent: 0, time: Date.now() });
-          
-          const [currentWatts, setCurrentWatts] = useState(0);
-          const [accumulatedKwh, setAccumulatedKwh] = useState(0);
-          const [startTime] = useState(Date.now());
-
-          // NEW STATES for Core Visualization
-          const [cpuCores, setCpuCores] = useState([]);
-          const [procCount, setProcCount] = useState(0);
-          const [diskReadSpeed, setDiskReadSpeed] = useState(0);
-          const [diskWriteSpeed, setDiskWriteSpeed] = useState(0);
-          const [diskIOHistory, setDiskIOHistory] = useState(Array(30).fill(0));
-          const lastDiskStats = useRef({ read: 0, write: 0, time: Date.now() });
+          const [cpuLoad, setCpuLoad] = useState(0); const [cpuTemp, setCpuTemp] = useState(0); const [ramUsed, setRamUsed] = useState(0); const [ramTotal, setRamTotal] = useState(0); const [diskUsed, setDiskUsed] = useState(0); const [diskTotal, setDiskTotal] = useState(0); const [cpuHistory, setCpuHistory] = useState(Array(30).fill(0)); const [netDownHistory, setNetDownHistory] = useState(Array(30).fill(0)); const [netUpHistory, setNetUpHistory] = useState(Array(30).fill(0)); const [netDownSpeed, setNetDownSpeed] = useState(0); const [netUpSpeed, setNetUpSpeed] = useState(0); const lastNetStats = useRef({ recv: 0, sent: 0, time: Date.now() }); const [cpuCores, setCpuCores] = useState([]); const [procCount, setProcCount] = useState(0); const [diskReadSpeed, setDiskReadSpeed] = useState(0); const [diskWriteSpeed, setDiskWriteSpeed] = useState(0); const [diskIOHistory, setDiskIOHistory] = useState(Array(30).fill(0)); const lastDiskStats = useRef({ read: 0, write: 0, time: Date.now() });
 
           const fetchData = async () => {
             const res = await authFetch('/api/system/stats');
             if (!res || !res.ok) return;
             try {
                 const stats = await res.json();
-                setCpuLoad(stats.cpu_pct); 
-                setCpuTemp(stats.temp || 0);
-                setRamUsed(stats.ram_used / (1024**3)); setRamTotal(stats.ram_total / (1024**3));
-                setDiskUsed(stats.disk_used / (1024**3)); setDiskTotal(stats.disk_total / (1024**3));
-                setCpuHistory(prev => [...prev.slice(1), stats.cpu_pct]);
-                
-                // New stats mapping
-                setProcCount(stats.process_count || 0);
-                setCpuCores(stats.cpu_cores || []);
-
-                const estimatedWatts = 100 + ((stats.cpu_pct / 100) * 250);
-                setCurrentWatts(estimatedWatts);
-                
-                const hoursSinceStart = (Date.now() - startTime) / (1000 * 60 * 60);
-                setAccumulatedKwh((estimatedWatts * hoursSinceStart) / 1000);
-
+                setCpuLoad(stats.cpu_pct); setCpuTemp(stats.temp || 0); setRamUsed(stats.ram_used / (1024**3)); setRamTotal(stats.ram_total / (1024**3)); setDiskUsed(stats.disk_used / (1024**3)); setDiskTotal(stats.disk_total / (1024**3)); setCpuHistory(prev => [...prev.slice(1), stats.cpu_pct]); setProcCount(stats.process_count || 0); setCpuCores(stats.cpu_cores || []);
                 const now = Date.now(); const timeDiff = (now - lastNetStats.current.time) / 1000;
                 if (timeDiff > 0 && lastNetStats.current.recv > 0) {
-                    const bytesDown = stats.net_recv - lastNetStats.current.recv;
-                    const bytesUp = stats.net_sent - lastNetStats.current.sent;
-                    
-                    // Calc speed in bits/sec
-                    const bitsDown = bytesDown * 8;
-                    const bitsUp = bytesUp * 8;
-                    
-                    const downSpeed = bitsDown / timeDiff;
-                    const upSpeed = bitsUp / timeDiff;
-                    
-                    setNetDownSpeed(downSpeed);
-                    setNetUpSpeed(upSpeed);
-                    
-                    // History in Mbps for sparkline
-                    setNetDownHistory(prev => [...prev.slice(1), downSpeed / (1024 * 1024)]);
-                    setNetUpHistory(prev => [...prev.slice(1), upSpeed / (1024 * 1024)]);
+                    const downSpeed = (stats.net_recv - lastNetStats.current.recv) * 8 / timeDiff; const upSpeed = (stats.net_sent - lastNetStats.current.sent) * 8 / timeDiff;
+                    setNetDownSpeed(downSpeed); setNetUpSpeed(upSpeed); setNetDownHistory(prev => [...prev.slice(1), downSpeed / (1024 * 1024)]); setNetUpHistory(prev => [...prev.slice(1), upSpeed / (1024 * 1024)]);
+                    const rSpeed = Math.max(0, (stats.disk_io_read - lastDiskStats.current.read) / (1024*1024) / timeDiff); const wSpeed = Math.max(0, (stats.disk_io_write - lastDiskStats.current.write) / (1024*1024) / timeDiff);
+                    setDiskReadSpeed(rSpeed); setDiskWriteSpeed(wSpeed); setDiskIOHistory(prev => [...prev.slice(1), rSpeed + wSpeed]);
                 }
-                lastNetStats.current = { recv: stats.net_recv, sent: stats.net_sent, time: now };
-
-                // Disk I/O Calc (MB/s)
-                if (timeDiff > 0 && lastDiskStats.current.read > 0) {
-                    const readDiff = stats.disk_io_read - lastDiskStats.current.read;
-                    const writeDiff = stats.disk_io_write - lastDiskStats.current.write;
-                    const rSpeed = Math.max(0, readDiff / (1024*1024) / timeDiff);
-                    const wSpeed = Math.max(0, writeDiff / (1024*1024) / timeDiff);
-                    setDiskReadSpeed(rSpeed);
-                    setDiskWriteSpeed(wSpeed);
-                    setDiskIOHistory(prev => [...prev.slice(1), rSpeed + wSpeed]);
-                }
-                lastDiskStats.current = { read: stats.disk_io_read, write: stats.disk_io_write, time: now };
-
+                lastNetStats.current = { recv: stats.net_recv, sent: stats.net_sent, time: now }; lastDiskStats.current = { read: stats.disk_io_read, write: stats.disk_io_write, time: now };
             } catch(e) {}
           };
-
           useEffect(() => { fetchData(); const i = setInterval(fetchData, 2000); return () => clearInterval(i); }, []);
           const getLoadColor = (val) => val > 80 ? "stroke-rose-500 text-rose-500" : val > 50 ? "stroke-amber-400 text-amber-400" : "stroke-teal-400 text-teal-400";
-
-          const formatSpeed = (speed) => {
-              if (speed < 1024 * 1024) return `${(speed / 1024).toFixed(1)} Kbps`;
-              return `${(speed / (1024 * 1024)).toFixed(1)} Mbps`;
-          };
+          const formatSpeed = (speed) => speed < 1024 * 1024 ? `${(speed / 1024).toFixed(1)} Kbps` : `${(speed / (1024 * 1024)).toFixed(1)} Mbps`;
 
           return (
             <div className="space-y-6 animate-fade-in pb-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <GlowCard title="Processor" icon={Brain}>
-                  <CircularGauge value={cpuLoad} max={100} unit="%" label="TOTAL LOAD" color={getLoadColor(cpuLoad)} />
-                </GlowCard>
-                <GlowCard title="Memory" icon={MemoryStick}>
-                  <CircularGauge value={Math.round((ramUsed / ramTotal) * 100) || 0} max={100} unit="%" label={`${ramUsed.toFixed(1)}/${ramTotal.toFixed(0)} GB`} color="stroke-indigo-400 text-indigo-400" />
-                </GlowCard>
-                <GlowCard title="Thermal" icon={Zap}>
-                  <CircularGauge value={Math.round(cpuTemp)} max={100} unit="°C" label="PACKAGE" color={cpuTemp > 80 ? "stroke-rose-500" : "stroke-emerald-400 text-emerald-400"} />
-                </GlowCard>
-                <GlowCard title="Active Procs" icon={Activity}>
-                   <div className="flex flex-col items-center justify-center h-full">
-                       <span className="text-4xl font-light text-white font-mono">{procCount}</span>
-                       <span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase mt-2">Running Tasks</span>
-                   </div>
-                </GlowCard>
+                <GlowCard title="Processor" icon={Brain}><CircularGauge value={cpuLoad} max={100} unit="%" label="TOTAL LOAD" color={getLoadColor(cpuLoad)} /></GlowCard>
+                <GlowCard title="Memory" icon={MemoryStick}><CircularGauge value={Math.round((ramUsed / ramTotal) * 100) || 0} max={100} unit="%" label={`${ramUsed.toFixed(1)}/${ramTotal.toFixed(0)} GB`} color="stroke-indigo-400 text-indigo-400" /></GlowCard>
+                <GlowCard title="Thermal" icon={Zap}><CircularGauge value={Math.round(cpuTemp)} max={100} unit="°C" label="PACKAGE" color={cpuTemp > 80 ? "stroke-rose-500" : "stroke-emerald-400 text-emerald-400"} /></GlowCard>
+                <GlowCard title="Active Procs" icon={Activity}><div className="flex flex-col items-center justify-center h-full"><span className="text-4xl font-light text-white font-mono">{procCount}</span><span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase mt-2">Running Tasks</span></div></GlowCard>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <GlowCard title="Network Traffic" icon={Wifi} className="col-span-1 md:col-span-2">
-                  <div className="grid grid-cols-2 gap-8 h-full w-full px-4">
-                    <div>
-                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Down (RX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netDownSpeed)}</span></div>
-                      <div className="h-24 w-full bg-gradient-to-b from-emerald-500/5 to-transparent rounded-lg border-b border-emerald-500/20"><Sparkline data={netDownHistory} color="#34d399" height={80} /></div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Up (TX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netUpSpeed)}</span></div>
-                      <div className="h-24 w-full bg-gradient-to-b from-indigo-500/5 to-transparent rounded-lg border-b border-indigo-500/20"><Sparkline data={netUpHistory} color="#818cf8" height={80} /></div>
-                    </div>
-                  </div>
-                </GlowCard>
-
-                <GlowCard title="Disk I/O Speed" icon={HardDrive} className="col-span-1">
-                   <div className="flex flex-col justify-between h-full w-full px-2">
-                       <div className="flex flex-col gap-2 mb-4">
-                           <div className="flex justify-between"><span className="text-xs text-slate-500">READ</span><span className="text-emerald-400 font-mono">{diskReadSpeed.toFixed(1)} MB/s</span></div>
-                           <div className="flex justify-between"><span className="text-xs text-slate-500">WRITE</span><span className="text-amber-400 font-mono">{diskWriteSpeed.toFixed(1)} MB/s</span></div>
-                       </div>
-                       <div className="h-16 w-full"><Sparkline data={diskIOHistory} color="#fbbf24" height={60} /></div>
-                   </div>
-                </GlowCard>
+                <GlowCard title="Network Traffic" icon={Wifi} className="col-span-1 md:col-span-2"><div className="grid grid-cols-2 gap-8 h-full w-full px-4"><div><div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Down (RX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netDownSpeed)}</span></div><div className="h-24 w-full bg-gradient-to-b from-emerald-500/5 to-transparent rounded-lg border-b border-emerald-500/20"><Sparkline data={netDownHistory} color="#34d399" height={80} /></div></div><div><div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Up (TX)</span><span className={`text-lg font-mono ${theme.text}`}>{formatSpeed(netUpSpeed)}</span></div><div className="h-24 w-full bg-gradient-to-b from-indigo-500/5 to-transparent rounded-lg border-b border-indigo-500/20"><Sparkline data={netUpHistory} color="#818cf8" height={80} /></div></div></div></GlowCard>
+                <GlowCard title="Disk I/O Speed" icon={HardDrive} className="col-span-1"><div className="flex flex-col justify-between h-full w-full px-2"><div className="flex flex-col gap-2 mb-4"><div className="flex justify-between"><span className="text-xs text-slate-500">READ</span><span className="text-emerald-400 font-mono">{diskReadSpeed.toFixed(1)} MB/s</span></div><div className="flex justify-between"><span className="text-xs text-slate-500">WRITE</span><span className="text-amber-400 font-mono">{diskWriteSpeed.toFixed(1)} MB/s</span></div></div><div className="h-16 w-full"><Sparkline data={diskIOHistory} color="#fbbf24" height={60} /></div></div></GlowCard>
               </div>
-
-              {/* NEW CORE VISUALIZER */}
-              <CyberCard title="Neural Core Architecture" className="w-full min-h-[350px] flex flex-col items-center justify-center">
-                  <CpuCoreVisuals cores={cpuCores} />
-              </CyberCard>
+              <CyberCard title="Neural Core Architecture" className="w-full min-h-[350px] flex flex-col items-center justify-center"><CpuCoreVisuals cores={cpuCores} /></CyberCard>
             </div>
           );
         };
 
         const StorageView = ({ theme }) => {
-          const [currentPath, setCurrentPath] = useState(['ROOT']);
+          const [currentPath, setCurrentPath] = useState([]);
           const [files, setFiles] = useState([]);
           const [quota, setQuota] = useState({ used: 0, limit: 30 * 1024 * 1024 * 1024 });
 
           const fetchFiles = async () => {
-             const res = await authFetch('/api/storage/list?path=' + (currentPath.length > 1 ? currentPath.slice(1).join('/') : ''));
-             if (res && res.ok) {
-                 const data = await res.json();
-                 setFiles(data.files || []);
-             } else { setFiles([]); }
+             const res = await authFetch('/api/storage/list?path=' + (currentPath.length > 0 ? currentPath.join('/') : ''));
+             if (res && res.ok) { const data = await res.json(); setFiles(data.files || []); } else { setFiles([]); }
              const qRes = await authFetch('/api/storage/quota');
              if (qRes && qRes.ok) { const qData = await qRes.json(); setQuota({ used: qData.used, limit: qData.limit }); }
           };
-
           useEffect(() => { fetchFiles(); }, [currentPath]);
           
           const handleUpload = async (e) => {
-             const files = e.target.files;
-             if (!files || files.length === 0) return;
-
-             const formData = new FormData();
-             const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') : "";
-             formData.append('path', relPath);
-             
-             for(let i = 0; i < files.length; i++) {
-                 formData.append('files', files[i]);
-             }
-
-             // DEBUG: Log what we are sending
-             console.log("Uploading to path:", relPath);
-
-             const res = await authFetch('/api/storage/upload', {
-                 method: 'POST',
-                 body: formData
-             });
-             
-             if(res && res.ok) {
-                 fetchFiles();
-                 alert("Uppladdning lyckades!");
-             } else {
-                 console.error("Upload error", res);
-                 alert("Uppladdning misslyckades. Kontrollera serverrättigheter (chown)!");
-             }
+             const files = e.target.files; if (!files || files.length === 0) return;
+             const formData = new FormData(); const relPath = currentPath.length > 0 ? currentPath.join('/') : "";
+             formData.append('path', relPath); for(let i = 0; i < files.length; i++) { formData.append('files', files[i]); }
+             const res = await authFetch('/api/storage/upload', { method: 'POST', body: formData });
+             if(res && res.ok) { fetchFiles(); alert("Uppladdning lyckades!"); } else { alert("Uppladdning misslyckades."); }
           };
-
           const handleDownload = async (name) => {
-              const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') + '/' + name : name;
+              const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name;
               const res = await authFetch(`/api/storage/download?path=${relPath}`);
-              if(res && res.ok) {
-                  const blob = await res.blob();
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = name;
-                  document.body.appendChild(a);
-                  a.click();
-                  window.URL.revokeObjectURL(url);
-              } else {
-                  alert("Download failed.");
-              }
+              if(res && res.ok) { const blob = await res.blob(); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url); } else { alert("Download failed."); }
           };
-
           const handleDelete = async (name) => { 
               if(!confirm("Permanently delete " + name + "?")) return;
-              
-              const relPath = currentPath.length > 1 ? currentPath.slice(1).join('/') + '/' + name : name;
-              const res = await authFetch('/api/storage/delete', {
-                  method: 'POST',
-                  body: JSON.stringify({ path: relPath })
-              });
-
-              if(res && res.ok) {
-                  fetchFiles();
-              } else {
-                  alert("Delete failed.");
-              }
+              const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name;
+              const res = await authFetch('/api/storage/delete', { method: 'POST', body: JSON.stringify({ path: relPath }) });
+              if(res && res.ok) { fetchFiles(); } else { alert("Delete failed."); }
           };
-
-          const getIcon = (type) => {
-             if(type === 'folder') return <Folder size={18} className="text-amber-400 fill-amber-400/20"/>;
-             return <File size={18} className="text-indigo-400"/>;
-          };
-
+          const getIcon = (type) => type === 'dir' ? <Folder size={18} className="text-amber-400 fill-amber-400/20"/> : <File size={18} className="text-indigo-400"/>;
           const usedPercent = Math.min(100, (quota.used / quota.limit) * 100);
 
           return (
             <div className="space-y-6 animate-fade-in">
                 <GlowCard title="Capacity" icon={HardDrive} className="md:col-span-3" theme={theme}>
                     <div className="flex flex-col gap-3 w-full px-4">
-                        <div className="flex justify-between text-xs font-medium text-slate-400 tracking-wider">
-                            <span>USED: {formatBytes(quota.used)}</span>
-                            <span className="text-teal-400 font-bold">{usedPercent.toFixed(1)}%</span>
-                            <span>TOTAL: {formatBytes(quota.limit)}</span>
-                        </div>
-                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden flex shadow-inner relative">
-                            <div style={{ width: `${usedPercent}%` }} className="h-full bg-gradient-to-r from-teal-600 to-cyan-500 rounded-full shadow-[0_0_10px_rgba(45,212,191,0.3)] transition-all duration-1000" />
-                            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white mix-blend-difference">{usedPercent.toFixed(1)}% Full</div>
-                        </div>
+                        <div className="flex justify-between text-xs font-medium text-slate-400 tracking-wider"><span>USED: {formatBytes(quota.used)}</span><span className="text-teal-400 font-bold">{usedPercent.toFixed(1)}%</span><span>TOTAL: {formatBytes(quota.limit)}</span></div>
+                        <div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden flex shadow-inner relative"><div style={{ width: `${usedPercent}%` }} className="h-full bg-gradient-to-r from-teal-600 to-cyan-500 rounded-full shadow-[0_0_10px_rgba(45,212,191,0.3)] transition-all duration-1000" /><div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white mix-blend-difference">{usedPercent.toFixed(1)}% Full</div></div>
                     </div>
                 </GlowCard>
-
                 <Card title="Aurora-Nova Explorer" icon={Folder} theme={theme}>
                    <div className={`flex items-center gap-2 mb-6 p-2 ${theme.inputBg} rounded-lg border ${theme.border}`}>
-                      <button onClick={() => setCurrentPath(p => p.length > 1 ? p.slice(0, -1) : p)} disabled={currentPath.length === 1} className={`p-2 hover:bg-black/5 rounded-md disabled:opacity-30 ${theme.text}`}><CornerLeftUp size={16} /></button>
-                      <div className={`font-mono text-sm ${theme.accent} flex-1 ml-2 tracking-tight`}>{currentPath.join(' / ')}</div>
-                      <div className="flex gap-2">
-                         <label className="cursor-pointer p-2 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 rounded-md text-xs font-bold flex items-center gap-2 transition-colors">
-                            <Plus size={14} /> ADD FILE
-                            <input type="file" className="hidden" multiple onChange={handleUpload} />
-                         </label>
-                      </div>
+                      <button onClick={() => setCurrentPath(p => p.length > 0 ? p.slice(0, -1) : p)} disabled={currentPath.length === 0} className={`p-2 hover:bg-black/5 rounded-md disabled:opacity-30 ${theme.text}`}><CornerLeftUp size={16} /></button>
+                      <div className={`font-mono text-sm ${theme.accent} flex-1 ml-2 tracking-tight`}>ROOT / {currentPath.join(' / ')}</div>
+                      <div className="flex gap-2"><label className="cursor-pointer p-2 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 rounded-md text-xs font-bold flex items-center gap-2 transition-colors"><Plus size={14} /> ADD FILE<input type="file" className="hidden" multiple onChange={handleUpload} /></label></div>
                    </div>
-                   {files.length === 0 ? (
-                       <div className="text-center py-16 text-slate-600 italic text-sm flex flex-col items-center gap-3">
-                           <Folder size={32} className="opacity-20" />
-                           Empty directory
-                       </div>
-                   ) : (
+                   {files.length === 0 ? <div className="text-center py-16 text-slate-600 italic text-sm flex flex-col items-center gap-3"><Folder size={32} className="opacity-20" />Empty directory</div> : (
                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {files.map((file, i) => (
                              <div key={i} className={`${theme.id === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.02] border-white/5'} border hover:border-teal-500/30 p-3 rounded-lg flex items-center justify-between group transition-all cursor-pointer`}>
-                                <div className="flex items-center gap-3 overflow-hidden" onClick={() => file.type === 'dir' && setCurrentPath(p => [...p, file.name])}>
-                                   <div className={`p-2 rounded-md ${theme.id === 'light' ? 'bg-white border border-slate-200' : 'bg-black/20'}`}>{getIcon(file.type === 'dir' ? 'folder' : 'file')}</div>
-                                   <div className="overflow-hidden"><div className={`text-sm font-medium truncate ${theme.text}`}>{file.name}</div>{file.type !== 'dir' && <div className={`text-[10px] ${theme.textDim}`}>{formatBytes(file.size || 0)}</div>}</div>
-                                </div>
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {file.type !== 'dir' && <button onClick={(e) => {e.stopPropagation(); handleDownload(file.name)}} className="p-1.5 hover:bg-teal-500/10 text-slate-500 hover:text-teal-400 rounded transition-all"><Download size={14} /></button>}
-                                    <button onClick={(e) => {e.stopPropagation(); handleDelete(file.name)}} className="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded transition-all"><Trash2 size={14} /></button>
-                                </div>
+                                <div className="flex items-center gap-3 overflow-hidden" onClick={() => file.type === 'dir' && setCurrentPath(p => [...p, file.name])}><div className={`p-2 rounded-md ${theme.id === 'light' ? 'bg-white border border-slate-200' : 'bg-black/20'}`}>{getIcon(file.type === 'dir' ? 'dir' : 'file')}</div><div className="overflow-hidden"><div className={`text-sm font-medium truncate ${theme.text}`}>{file.name}</div>{file.type !== 'dir' && <div className={`text-[10px] ${theme.textDim}`}>{formatBytes(file.size || 0)}</div>}</div></div>
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">{file.type !== 'dir' && <button onClick={(e) => {e.stopPropagation(); handleDownload(file.name)}} className="p-1.5 hover:bg-teal-500/10 text-slate-500 hover:text-teal-400 rounded transition-all"><Download size={14} /></button>}<button onClick={(e) => {e.stopPropagation(); handleDelete(file.name)}} className="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded transition-all"><Trash2 size={14} /></button></div>
                              </div>
                           ))}
                        </div>
@@ -1196,99 +724,37 @@ const DockerView = ({ theme, username }) => {
           const logRef = useRef(null);
           const [tps, setTps] = useState(0.0);
           const [ramUsage, setRamUsage] = useState(0.0);
-
           useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [logs]);
-
           const updateData = async () => {
              const resStatus = await authFetch('/api/minecraft/status');
-             if (resStatus && resStatus.ok) {
-                 const data = await resStatus.json();
-                 setStatus(data.running ? 'ONLINE' : 'OFFLINE');
-                 setPlayers(data.online_players || 0);
-                 setMaxPlayers(data.max_players || 20);
-                 setTps(data.running ? (data.tps || 20.0) : 0); 
-                 setRamUsage(data.running ? (data.ram_usage || 4.2) : 0);
-             } else { 
-                 setStatus('OFFLINE'); 
-                 setTps(0);
-                 setRamUsage(0);
-             }
-             const resLogs = await authFetch('/api/minecraft/logs');
-             if (resLogs && resLogs.ok) { const data = await resLogs.json(); setLogs(data.logs || []); }
+             if (resStatus && resStatus.ok) { const data = await resStatus.json(); setStatus(data.running ? 'ONLINE' : 'OFFLINE'); setPlayers(data.online_players || 0); setMaxPlayers(data.max_players || 20); setTps(data.running ? (data.tps || 20.0) : 0); setRamUsage(data.running ? (data.ram_usage || 4.2) : 0); } else { setStatus('OFFLINE'); setTps(0); setRamUsage(0); }
+             const resLogs = await authFetch('/api/minecraft/logs'); if (resLogs && resLogs.ok) { const data = await resLogs.json(); setLogs(data.logs || []); }
           };
-
           useEffect(() => { updateData(); const interval = setInterval(updateData, 2000); return () => clearInterval(interval); }, []);
-
-          const sendCommand = async () => {
-              if(!cmdInput) return;
-              setLogs(prev => [...prev, `> ${cmdInput}`]);
-              try { await authFetch('/api/minecraft/command', { method: 'POST', body: JSON.stringify({ command: cmdInput }) }); setCmdInput(""); setTimeout(updateData, 500); } catch(e) { }
-          };
-
+          const sendCommand = async () => { if(!cmdInput) return; setLogs(prev => [...prev, `> ${cmdInput}`]); try { await authFetch('/api/minecraft/command', { method: 'POST', body: JSON.stringify({ command: cmdInput }) }); setCmdInput(""); setTimeout(updateData, 500); } catch(e) { } };
           const handleStart = async () => { if (status !== 'OFFLINE') return; setStatus('STARTING'); setLogs(prev => [...prev, "[System]: Initializing startup sequence..."]); try { await authFetch('/api/minecraft/start', { method: 'POST' }); } catch(e) {} };
           const handleStop = async () => { if (status === 'OFFLINE') return; setStatus('STOPPING'); setLogs(prev => [...prev, "[System]: Stopping server..."]); try { await authFetch('/api/minecraft/stop', { method: 'POST' }); } catch(e) {} };
 
           return (
             <div className="animate-fade-in space-y-6">
-                <header className="flex flex-col md:flex-row justify-between items-end pb-6 mb-2">
-                    <div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-white flex items-center gap-3 tracking-tight">
-                            Minecraft<span className="text-teal-400 font-light">Server</span>
-                        </h1>
-                        <p className="text-xs font-mono text-slate-400 mt-2 flex items-center gap-2"><Server size={12}/> AURORA-YMIR-1 // DOCKER CONTAINER</p>
-                    </div>
-                    <div className={`flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 mt-4 md:mt-0`}>
-                        <div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] ${status === 'ONLINE' ? 'bg-emerald-400 text-emerald-400' : status === 'OFFLINE' ? 'bg-rose-500 text-rose-500' : 'bg-amber-400 text-amber-400'}`}></div>
-                        <span className="text-sm font-bold tracking-wide text-slate-200">{status}</span>
-                    </div>
-                </header>
+                <header className="flex flex-col md:flex-row justify-between items-end pb-6 mb-2"><div><h1 className="text-3xl md:text-4xl font-bold text-white flex items-center gap-3 tracking-tight">Minecraft<span className="text-teal-400 font-light">Server</span></h1><p className="text-xs font-mono text-slate-400 mt-2 flex items-center gap-2"><Server size={12}/> AURORA-YMIR-1 // DOCKER CONTAINER</p></div><div className={`flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 mt-4 md:mt-0`}><div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] ${status === 'ONLINE' ? 'bg-emerald-400 text-emerald-400' : status === 'OFFLINE' ? 'bg-rose-500 text-rose-500' : 'bg-amber-400 text-amber-400'}`}></div><span className="text-sm font-bold tracking-wide text-slate-200">{status}</span></div></header>
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
                     <div className="lg:col-span-1 space-y-4">
-                       <MinecraftCard title="Control Panel" icon={Settings}>
-                           <div className="grid gap-3">
-                               <button onClick={handleStart} disabled={status !== 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all shadow-lg ${status === 'OFFLINE' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:to-emerald-400 text-white' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}><Play size={16} fill="currentColor" /> START</button>
-                               <button onClick={() => { handleStop(); setTimeout(handleStart, 5000); }} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status === 'ONLINE' ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><RotateCcw size={16} /> RESTART</button>
-                               <button onClick={handleStop} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status !== 'OFFLINE' ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><Square size={16} fill="currentColor" /> STOP</button>
-                           </div>
-                       </MinecraftCard>
-                       <MinecraftCard title="Players" icon={Users}>
-                           <div className="flex justify-between items-end mb-2"><span className="text-3xl font-light text-white">{players}</span><span className="text-xs text-slate-500 mb-1 uppercase font-bold">/ {maxPlayers} Online</span></div>
-                           <div className="h-1.5 w-full bg-slate-800/50 rounded-full overflow-hidden"><div className="h-full bg-teal-500 transition-all duration-500" style={{ width: `${(players/maxPlayers)*100}%` }} /></div>
-                       </MinecraftCard>
-                       <div className="grid grid-cols-2 gap-4">
-                           <MinecraftCard title="TPS" icon={Activity} className="items-center justify-center text-center">
-                               <div className={`text-xl font-bold ${tps >= 18 ? 'text-emerald-400' : 'text-amber-400'}`}>{tps.toFixed(1)}</div>
-                           </MinecraftCard>
-                           <MinecraftCard title="RAM" icon={MemoryStick} className="items-center justify-center text-center">
-                               <div className="text-xl font-bold text-indigo-400">{ramUsage.toFixed(1)}G</div>
-                           </MinecraftCard>
-                       </div>
+                       <MinecraftCard title="Control Panel" icon={Settings}><div className="grid gap-3"><button onClick={handleStart} disabled={status !== 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all shadow-lg ${status === 'OFFLINE' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:to-emerald-400 text-white' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}><Play size={16} fill="currentColor" /> START</button><button onClick={() => { handleStop(); setTimeout(handleStart, 5000); }} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status === 'ONLINE' ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><RotateCcw size={16} /> RESTART</button><button onClick={handleStop} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status !== 'OFFLINE' ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><Square size={16} fill="currentColor" /> STOP</button></div></MinecraftCard>
+                       <MinecraftCard title="Players" icon={Users}><div className="flex justify-between items-end mb-2"><span className="text-3xl font-light text-white">{players}</span><span className="text-xs text-slate-500 mb-1 uppercase font-bold">/ {maxPlayers} Online</span></div><div className="h-1.5 w-full bg-slate-800/50 rounded-full overflow-hidden"><div className="h-full bg-teal-500 transition-all duration-500" style={{ width: `${(players/maxPlayers)*100}%` }} /></div></MinecraftCard>
+                       <div className="grid grid-cols-2 gap-4"><MinecraftCard title="TPS" icon={Activity} className="items-center justify-center text-center"><div className={`text-xl font-bold ${tps >= 18 ? 'text-emerald-400' : 'text-amber-400'}`}>{tps.toFixed(1)}</div></MinecraftCard><MinecraftCard title="RAM" icon={MemoryStick} className="items-center justify-center text-center"><div className="text-xl font-bold text-indigo-400">{ramUsage.toFixed(1)}G</div></MinecraftCard></div>
                     </div>
-                    <div className="lg:col-span-3 h-[600px] lg:h-auto">
-                        <MinecraftCard title="Console" icon={Terminal} className="h-full bg-slate-950/80">
-                            <div className="flex flex-col h-full">
-                                <div ref={logRef} className="flex-1 overflow-y-auto font-mono text-sm space-y-1 pr-2 custom-scrollbar p-2 rounded border border-white/5 mb-4 shadow-inner bg-black/40">
-                                    {logs.map((log, i) => <TerminalLine key={i} text={log} />)}
-                                    {status === 'OFFLINE' && <div className="text-slate-600 italic text-xs text-center mt-10 opacity-50">Server is offline. Logs unavailable.</div>}
-                                </div>
-                                <div className="flex gap-2 items-center bg-white/5 p-1.5 rounded-lg border border-white/5 focus-within:border-teal-500/50 focus-within:ring-1 focus-within:ring-teal-500/20 transition-all">
-                                    <span className="pl-2 text-teal-500 font-mono font-bold">&gt;</span>
-                                    <input type="text" value={cmdInput} onChange={(e) => setCmdInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendCommand()} placeholder="Execute command..." className="w-full bg-transparent border-none text-slate-200 font-mono text-sm outline-none" disabled={status === 'OFFLINE'} />
-                                </div>
-                            </div>
-                        </MinecraftCard>
-                    </div>
+                    <div className="lg:col-span-3 h-[600px] lg:h-auto"><MinecraftCard title="Console" icon={Terminal} className="h-full bg-slate-950/80"><div className="flex flex-col h-full"><div ref={logRef} className="flex-1 overflow-y-auto font-mono text-sm space-y-1 pr-2 custom-scrollbar p-2 rounded border border-white/5 mb-4 shadow-inner bg-black/40">{logs.map((log, i) => <TerminalLine key={i} text={log} />)}{status === 'OFFLINE' && <div className="text-slate-600 italic text-xs text-center mt-10 opacity-50">Server is offline. Logs unavailable.</div>}</div><div className="flex gap-2 items-center bg-white/5 p-1.5 rounded-lg border border-white/5 focus-within:border-teal-500/50 focus-within:ring-1 focus-within:ring-teal-500/20 transition-all"><span className="pl-2 text-teal-500 font-mono font-bold">&gt;</span><input type="text" value={cmdInput} onChange={(e) => setCmdInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendCommand()} placeholder="Execute command..." className="w-full bg-transparent border-none text-slate-200 font-mono text-sm outline-none" disabled={status === 'OFFLINE'} /></div></div></MinecraftCard></div>
                 </div>
             </div>
           );
         };
 
-const BorealisView = ({ theme, avatar }) => {
+        const BorealisView = ({ theme, avatar }) => {
           const [messages, setMessages] = useState([{ id: 1, sender: 'ai', text: 'Greetings. I am Borealis. How can I assist with server operations today?' }]);
           const [input, setInput] = useState("");
-          const chatContainerRef = useRef(null); // Ändrat: Referens till containern istället för en div
+          const chatContainerRef = useRef(null);
           const [isLoading, setIsLoading] = useState(false);
-
           const sendMessage = async (e) => {
             e.preventDefault(); if (!input.trim()) return;
             const userMsg = { id: Date.now(), sender: 'user', text: input };
@@ -1299,127 +765,86 @@ const BorealisView = ({ theme, avatar }) => {
                 else { setTimeout(() => { setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: "I cannot connect to my core logic at the moment. (Simulated Response)" }]); }, 1000); }
             } catch (error) { setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: "Connection Error." }]); } finally { setIsLoading(false); }
           };
-
-          // Ändrat: Scrollar BARA containern, påverkar inte sidans position
-          useEffect(() => { 
-              if (chatContainerRef.current) {
-                  chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-              }
-          }, [messages, isLoading]);
+          useEffect(() => { if (chatContainerRef.current) { chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight; } }, [messages, isLoading]);
           
           return (
             <Card title="BOREALIS INTELLIGENCE" icon={Sparkles} className="h-[600px] flex flex-col animate-fade-in" theme={theme}>
-              {/* Ändrat: ref={chatContainerRef} sitter nu på scroll-containern */}
               <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-6 pr-4 mb-4 custom-scrollbar p-2 scroll-smooth">
-                  {messages.map(msg => (
-                      <div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          {msg.sender === 'ai' && <div className="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400 border border-teal-500/30 shrink-0"><Sparkles size={16}/></div>}
-                          
-                          <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-lg ${msg.sender === 'user' ? 'bg-teal-600 text-white rounded-br-none' : `${theme.inputBg} ${theme.text} border ${theme.border} rounded-bl-none`}`}>
-                              {msg.text}
-                          </div>
-                          
-                          {msg.sender === 'user' && (
-                             <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-700 border border-white/10 shrink-0">
-                                 {avatar ? <img src={avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">U</div>}
-                             </div>
-                          )}
-                      </div>
-                  ))}
+                  {messages.map(msg => (<div key={msg.id} className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>{msg.sender === 'ai' && <div className="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400 border border-teal-500/30 shrink-0"><Sparkles size={16}/></div>}<div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed shadow-lg ${msg.sender === 'user' ? 'bg-teal-600 text-white rounded-br-none' : `${theme.inputBg} ${theme.text} border ${theme.border} rounded-bl-none`}`}>{msg.text}</div>{msg.sender === 'user' && (<div className="w-8 h-8 rounded-full overflow-hidden bg-slate-700 border border-white/10 shrink-0">{avatar ? <img src={avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">U</div>}</div>)}</div>))}
                   {isLoading && <div className="flex gap-2 items-center text-xs text-teal-400 ml-12 animate-pulse"><Sparkles size={12}/> Processing query...</div>}
               </div>
-              <form onSubmit={sendMessage} className="relative">
-                  <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Borealis..." className={`w-full ${theme.inputBg} border ${theme.border} rounded-xl p-4 pr-12 text-sm ${theme.text} focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20 outline-none transition-all shadow-inner`} />
-                  <button type="submit" disabled={isLoading} className={`absolute right-2 top-2 p-2 rounded-lg ${theme.accentBg} ${theme.accent} hover:opacity-80 transition-all`}><ArrowUp size={18} /></button>
-              </form>
+              <form onSubmit={sendMessage} className="relative"><input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask Borealis..." className={`w-full ${theme.inputBg} border ${theme.border} rounded-xl p-4 pr-12 text-sm ${theme.text} focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/20 outline-none transition-all shadow-inner`} /><button type="submit" disabled={isLoading} className={`absolute right-2 top-2 p-2 rounded-lg ${theme.accentBg} ${theme.accent} hover:opacity-80 transition-all`}><ArrowUp size={18} /></button></form>
             </Card>
           );
         };
         
+        const StreamingView = ({ theme }) => {
+            const [status, setStatus] = useState('unknown');
+            const [showQr, setShowQr] = useState(false);
+            const [activeCategory, setActiveCategory] = useState('movies');
+            
+            const serverIp = window.location.hostname;
+            const jellyfinPort = 8096;
+            const jellyfinUrl = `http://${serverIp}:${jellyfinPort}`;
+
+            const categories = [
+                { id: 'movies', label: 'Movies', icon: Film, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20', desc: '4K HDR Cinema Collection' },
+                { id: 'tv', label: 'TV Shows', icon: Tv, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', desc: 'Binge-worthy Series' },
+                { id: 'music', label: 'Music', icon: Music, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20', desc: 'Lossless Audio Library' },
+                { id: 'photos', label: 'Photos', icon: ImageIcon, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'Memories & Albums' }
+            ];
+
+            const checkStatus = async () => {
+                const res = await authFetch('/api/docker/containers');
+                if (res && res.ok) {
+                    const containers = await res.json();
+                    const jf = containers.find(c => c.image.includes('jellyfin'));
+                    setStatus(jf && jf.status === 'running' ? 'running' : 'stopped');
+                }
+            };
+            useEffect(() => { checkStatus(); }, []);
+
+            const installJellyfin = async () => {
+                setStatus('installing');
+                await authFetch('/api/docker/containers/create', { method: 'POST', body: JSON.stringify({ name: 'aurora-media', template: 'jellyfin' }) });
+                setTimeout(checkStatus, 5000);
+            };
+            const activeCatData = categories.find(c => c.id === activeCategory);
+
+            return (
+                <div className="animate-fade-in relative h-[calc(100vh-140px)] flex flex-col">
+                    <div className="flex justify-between items-end mb-8 border-b border-white/5 pb-6">
+                        <div><h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight flex items-center gap-3">Aurora <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Cinema</span></h1><p className="text-slate-400 mt-2 font-light tracking-wide flex items-center gap-2"><span className={`w-2 h-2 rounded-full ${status === 'running' ? 'bg-emerald-400 shadow-[0_0_10px_#34d399]' : 'bg-rose-500'}`}></span>{status === 'running' ? 'MEDIA CORE ONLINE' : 'SYSTEM OFFLINE'}</p></div>
+                        {status === 'running' && (<div className="flex gap-3"><button onClick={() => setShowQr(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-sm font-bold text-slate-300"><Smartphone size={18} /> MOBILE CONNECT</button><a href={jellyfinUrl} target="_blank" className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-lg shadow-purple-900/40 transition-all hover:scale-105"><Play size={18} fill="currentColor" /> LAUNCH PLAYER</a></div>)}
+                    </div>
+                    {status === 'running' ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
+                            <div className="lg:col-span-1 space-y-3"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Library Access</h3>{categories.map(cat => (<button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all duration-300 group relative overflow-hidden ${activeCategory === cat.id ? `${cat.bg} ${cat.border}` : 'bg-slate-900/40 border-white/5 hover:border-white/10'}`}><div className={`p-3 rounded-lg bg-slate-950 ${cat.color} group-hover:scale-110 transition-transform`}><cat.icon size={24} /></div><div className="text-left z-10"><div className={`font-bold text-lg ${activeCategory === cat.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{cat.label}</div><div className="text-[10px] text-slate-500 uppercase tracking-wider">{cat.id} Library</div></div>{activeCategory === cat.id && <div className={`absolute right-0 top-0 bottom-0 w-1 ${cat.color.replace('text-', 'bg-')}`}></div>}</button>))}</div>
+                            <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50 group"><div className={`absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 pointer-events-none transition-colors duration-700 ${activeCatData.bg.replace('/10', '/30').replace('bg-', 'bg-gradient-to-br from-')}`}></div><div className="absolute inset-0 flex flex-col items-center justify-center text-center p-10 z-10"><div className={`p-6 rounded-full mb-6 ${activeCatData.bg} ${activeCatData.color} shadow-[0_0_50px_rgba(0,0,0,0.5)]`}><activeCatData.icon size={64} strokeWidth={1} /></div><h2 className="text-3xl font-bold text-white mb-2">{activeCatData.desc}</h2><p className="text-slate-400 max-w-md mx-auto mb-8">Stream your personal {activeCatData.label.toLowerCase()} collection directly from Aurora Storage to any device in your network.</p><a href={jellyfinUrl} target="_blank" className="px-8 py-3 rounded-full border border-white/20 hover:bg-white/10 text-white font-bold tracking-widest text-xs transition-all">OPEN LIBRARY</a></div></div>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/20"><div className="p-6 rounded-full bg-slate-800 text-slate-500 mb-4"><Server size={48} /></div><h2 className="text-xl font-bold text-white mb-2">Media Server is Offline</h2><p className="text-slate-400 mb-6 text-sm">Jellyfin container is not running on the Docker Host.</p><button onClick={installJellyfin} disabled={status === 'installing'} className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold transition-all">{status === 'installing' ? 'INITIALIZING...' : 'START MEDIA SERVER'}</button></div>
+                    )}
+                    {showQr && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in p-4" onClick={() => setShowQr(false)}><div className="bg-slate-900 border border-white/10 p-8 rounded-2xl shadow-2xl max-w-sm w-full relative" onClick={e => e.stopPropagation()}><button onClick={() => setShowQr(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white"><X size={20} /></button><div className="text-center"><div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-purple-500/10 text-purple-400 mb-4"><Smartphone size={24} /></div><h3 className="text-xl font-bold text-white mb-1">Mobile Connect</h3><p className="text-slate-400 text-xs mb-6">Scan to configure Jellyfin App</p><div className="bg-white p-4 rounded-xl mx-auto w-fit shadow-[0_0_30px_rgba(168,85,247,0.2)]"><img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(jellyfinUrl)}`} alt="QR" className="w-48 h-48 mix-blend-multiply" /></div><div className="mt-6 bg-slate-950 p-3 rounded border border-white/5"><div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Server Address</div><div className="font-mono text-purple-400 text-sm select-all">{jellyfinUrl}</div></div></div></div></div>
+                    )}
+                </div>
+            );
+        };
+
         const SettingsView = ({ theme, setTheme, username, avatar, setAvatar }) => {
             const [formData, setFormData] = useState({ email: 'admin@borealis.dev', password: '', newPassword: '' });
             const handleChange = (e) => setFormData({...formData, [e.target.name]: e.target.value});
-            
             const handleAvatarUpload = (e) => {
                 const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setAvatar(reader.result);
-                        localStorage.setItem('user_avatar', reader.result);
-                    };
-                    reader.readAsDataURL(file);
-                }
+                if (file) { const reader = new FileReader(); reader.onloadend = () => { setAvatar(reader.result); localStorage.setItem('user_avatar', reader.result); }; reader.readAsDataURL(file); }
             };
-
-            const handleSave = async () => { 
-                if(formData.newPassword) {
-                    alert("Simulated: Password updated successfully.");
-                } else {
-                    alert("Settings saved."); 
-                }
-                setFormData({...formData, password: '', newPassword: ''});
-            };
+            const handleSave = async () => { if(formData.newPassword) { alert("Simulated: Password updated successfully."); } else { alert("Settings saved."); } setFormData({...formData, password: '', newPassword: ''}); };
 
             return (
             <div className="max-w-3xl mx-auto animate-fade-in">
-                <Card title="User Configuration" icon={Cog} theme={theme} className="mb-6">
-                    <div className="grid gap-6">
-                        <div className="flex items-center gap-6 pb-6 border-b border-white/5">
-                            <div className="relative group">
-                                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg shadow-teal-500/20 overflow-hidden">
-                                    {avatar ? <img src={avatar} className="w-full h-full object-cover" /> : username[0]}
-                                </div>
-                                <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full">
-                                    <Camera size={24} className="text-white" />
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                                </label>
-                            </div>
-                            <div>
-                                <h3 className={`text-xl font-bold ${theme.text}`}>{username}</h3>
-                                <p className={`text-sm ${theme.textDim}`}>Super Admin // Level 10</p>
-                                <label className="mt-2 inline-block text-xs text-teal-400 hover:text-teal-300 cursor-pointer">
-                                    Change Profile Picture
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-6">
-                            <div>
-                                <label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>Email Address</label>
-                                <input type="email" name="email" value={formData.email} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} />
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
-                                <div>
-                                    <label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>Current Password</label>
-                                    <input type="password" name="password" value={formData.password} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="********" />
-                                </div>
-                                <div>
-                                    <label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>New Password</label>
-                                    <input type="password" name="newPassword" value={formData.newPassword} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="Enter new password" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex justify-end pt-4">
-                            <button onClick={handleSave} className="bg-teal-600 hover:bg-teal-500 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg shadow-teal-900/20 transition-all">Save Changes</button>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card title="Interface Theme" icon={Layers} theme={theme}>
-                     <div className="grid grid-cols-2 gap-4">
-                        <button onClick={() => setTheme(THEMES.cyberpunk)} className={`p-6 rounded-xl border flex flex-col items-center gap-3 transition-all ${theme.id === 'cyberpunk' ? 'border-teal-500 bg-teal-500/10 text-teal-400' : 'border-white/10 hover:bg-white/5 text-slate-400'}`}>
-                            <Moon size={28} />
-                            <span className="text-xs font-bold tracking-widest">NEBULA (DARK)</span>
-                        </button>
-                        <button onClick={() => setTheme(THEMES.light)} className={`p-6 rounded-xl border flex flex-col items-center gap-3 transition-all ${theme.id === 'light' ? 'border-indigo-500 bg-indigo-50 text-indigo-600 shadow-md' : 'border-white/10 hover:bg-white/5 text-slate-400'}`}>
-                            <Sun size={28} />
-                            <span className="text-xs font-bold tracking-widest">DAYLIGHT</span>
-                        </button>
-                     </div>
-                </Card>
+                <Card title="User Configuration" icon={Cog} theme={theme} className="mb-6"><div className="grid gap-6"><div className="flex items-center gap-6 pb-6 border-b border-white/5"><div className="relative group"><div className="w-24 h-24 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg shadow-teal-500/20 overflow-hidden">{avatar ? <img src={avatar} className="w-full h-full object-cover" /> : username[0]}</div><label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full"><Camera size={24} className="text-white" /><input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} /></label></div><div><h3 className={`text-xl font-bold ${theme.text}`}>{username}</h3><p className={`text-sm ${theme.textDim}`}>Super Admin // Level 10</p><label className="mt-2 inline-block text-xs text-teal-400 hover:text-teal-300 cursor-pointer">Change Profile Picture<input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} /></label></div></div><div className="grid grid-cols-1 gap-6"><div><label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>Email Address</label><input type="email" name="email" value={formData.email} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} /></div><div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5"><div><label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>Current Password</label><input type="password" name="password" value={formData.password} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="********" /></div><div><label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>New Password</label><input type="password" name="newPassword" value={formData.newPassword} onChange={handleChange} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text} focus:border-teal-500/50 outline-none`} placeholder="Enter new password" /></div></div></div><div className="flex justify-end pt-4"><button onClick={handleSave} className="bg-teal-600 hover:bg-teal-500 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg shadow-teal-900/20 transition-all">Save Changes</button></div></div></Card>
+                <Card title="Interface Theme" icon={Layers} theme={theme}><div className="grid grid-cols-2 gap-4"><button onClick={() => setTheme(THEMES.cyberpunk)} className={`p-6 rounded-xl border flex flex-col items-center gap-3 transition-all ${theme.id === 'cyberpunk' ? 'border-teal-500 bg-teal-500/10 text-teal-400' : 'border-white/10 hover:bg-white/5 text-slate-400'}`}><Moon size={28} /><span className="text-xs font-bold tracking-widest">NEBULA (DARK)</span></button><button onClick={() => setTheme(THEMES.light)} className={`p-6 rounded-xl border flex flex-col items-center gap-3 transition-all ${theme.id === 'light' ? 'border-indigo-500 bg-indigo-50 text-indigo-600 shadow-md' : 'border-white/10 hover:bg-white/5 text-slate-400'}`}><Sun size={28} /><span className="text-xs font-bold tracking-widest">DAYLIGHT</span></button></div></Card>
             </div>
             );
         };
@@ -1436,22 +861,8 @@ const BorealisView = ({ theme, avatar }) => {
 
             useEffect(() => {
                 setGreeting(getGreeting());
-                fetch('https://api.open-meteo.com/v1/forecast?latitude=59.33&longitude=18.07&current=temperature_2m,weather_code')
-                    .then(r => r.json())
-                    .then(d => {
-                        if(d.current) {
-                            let cond = 'cloudy';
-                            const code = d.current.weather_code;
-                            if (code === 0) cond = 'sunny';
-                            else if (code < 3) cond = 'partly';
-                            else if (code < 60) cond = 'cloudy';
-                            else if (code < 80) cond = 'rainy';
-                            else cond = 'rainy';
-                            setWeather({ temp: Math.round(d.current.temperature_2m), condition: cond });
-                        }
-                    }).catch(e => console.error("Weather error", e));
-                const savedLog = localStorage.getItem('captainsLog');
-                if (savedLog) setLogEntry(savedLog);
+                fetch('https://api.open-meteo.com/v1/forecast?latitude=59.33&longitude=18.07&current=temperature_2m,weather_code').then(r => r.json()).then(d => { if(d.current) { let cond = 'cloudy'; const code = d.current.weather_code; if (code === 0) cond = 'sunny'; else if (code < 3) cond = 'partly'; else if (code < 60) cond = 'cloudy'; else if (code < 80) cond = 'rainy'; else cond = 'rainy'; setWeather({ temp: Math.round(d.current.temperature_2m), condition: cond }); } }).catch(e => console.error("Weather error", e));
+                const savedLog = localStorage.getItem('captainsLog'); if (savedLog) setLogEntry(savedLog);
             }, []);
 
             const handleSaveLog = () => { localStorage.setItem('captainsLog', logEntry); alert("Entry Saved."); };
@@ -1463,94 +874,17 @@ const BorealisView = ({ theme, avatar }) => {
 
             return (
                 <div className="animate-fade-in space-y-8">
-                    {/* Hero Section - Updated Font to Playfair Display/Serif */}
-                    <div className="relative p-8 rounded-3xl bg-gradient-to-r from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-white/5 overflow-hidden">
-                        <div className="absolute right-0 top-0 w-64 h-64 bg-teal-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-                        <div className="relative z-10">
-                            <h1 className="text-5xl md:text-6xl font-cybero tracking-tight text-white mb-2 italic">
-                                {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-teal-500 not-italic">{username}</span>
-                            </h1>
-                            <div className="flex items-center gap-3 text-slate-400 text-sm font-medium mt-4">
-                                <span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div> All Systems Nominal</span>
-                                <span className="opacity-30">|</span>
-                                <span>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div className="relative p-8 rounded-3xl bg-gradient-to-r from-slate-900/80 to-slate-900/40 backdrop-blur-xl border border-white/5 overflow-hidden"><div className="absolute right-0 top-0 w-64 h-64 bg-teal-500/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div><div className="relative z-10"><h1 className="text-5xl md:text-6xl font-cybero tracking-tight text-white mb-2 italic">{greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-200 to-teal-500 not-italic">{username}</span></h1><div className="flex items-center gap-3 text-slate-400 text-sm font-medium mt-4"><span className="flex items-center gap-1.5"><div className="w-2 h-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)]"></div> All Systems Nominal</span><span className="opacity-30">|</span><span>{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span></div></div></div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Weather Widget */}
-                        <CyberCard className="col-span-1 min-h-[300px]">
-                             <div className="flex flex-col justify-between h-full">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <div className="text-5xl font-light text-white">{weather.temp}°</div>
-                                        <div className="text-teal-400 text-sm font-bold uppercase tracking-wider mt-1">{weather.condition}</div>
-                                        <div className="text-slate-500 text-xs mt-1 flex items-center gap-1"><MapPin size={10} /> Stockholm</div>
-                                    </div>
-                                    <div className="w-24 h-24"><WeatherVisuals condition={weather.condition} /></div>
-                                </div>
-                                <div className="mt-6">
-                                    <div className="text-[10px] font-bold text-slate-500 mb-3 uppercase tracking-widest">Forecast</div>
-                                    <div className="flex justify-between overflow-x-auto pb-2 gap-2 scrollbar-none">
-                                        {forecast.slice(0, 5).map((item, idx) => (
-                                            <div key={idx} className="flex flex-col items-center space-y-2 min-w-[50px]">
-                                                <span className="text-[10px] text-slate-500">{item.time}</span>
-                                                <div className="text-slate-300">{item.condition === 'sunny' ? <Sun size={16}/> : item.condition === 'rainy' ? <CloudRain size={16}/> : <Cloud size={16}/>}</div>
-                                                <span className="text-xs font-bold text-white">{item.temp}°</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                             </div>
-                        </CyberCard>
-
-                        {/* Calendar */}
-                        <CyberCard title="Agenda" className="col-span-1 lg:col-span-2" actionButton={<button onClick={() => setIsModalOpen(true)} className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 transition-colors"><Plus size={16} /></button>}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-                                <div>
-                                    <div className="flex justify-between items-center mb-4 px-1">
-                                        <button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()-1); setCurrentDate(d); }} className="text-slate-500 hover:text-white"><ChevronLeft size={18} /></button>
-                                        <span className="text-sm font-bold text-white uppercase tracking-wider">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span>
-                                        <button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()+1); setCurrentDate(d); }} className="text-slate-500 hover:text-white"><ChevronRight size={18} /></button>
-                                    </div>
-                                    <div className="grid grid-cols-7 gap-1 text-center mb-2">{['M','T','W','T','F','S','S'].map(d => <span key={d} className="text-[10px] font-bold text-slate-600">{d}</span>)}</div>
-                                    <div className="grid grid-cols-7 gap-1 place-items-center">{renderCalendarDays()}</div>
-                                </div>
-                                <div className="border-l border-white/5 pl-6 flex flex-col h-full">
-                                    <h4 className="text-xs font-bold text-teal-500 mb-4 uppercase tracking-widest">{selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}</h4>
-                                    <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                                        {appointments[selectedDate.toDateString()]?.length > 0 ? (appointments[selectedDate.toDateString()].map((appt) => (
-                                            <div key={appt.id} className="bg-white/[0.03] hover:bg-white/[0.06] border-l-2 border-teal-500 p-3 rounded-r-lg transition-colors group flex justify-between">
-                                                <div>
-                                                    <div className="text-xs font-bold text-white mb-0.5">{appt.title}</div>
-                                                    <div className="text-[10px] text-slate-400 font-mono">{appt.time}</div>
-                                                </div>
-                                                <button onClick={() => handleDeleteAppointment(appt.id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-rose-400 transition-all"><Trash2 size={14} /></button>
-                                            </div>
-                                        ))) : (<div className="text-slate-600 italic text-xs mt-10 text-center">No events scheduled.</div>)}
-                                    </div>
-                                </div>
-                            </div>
-                        </CyberCard>
+                        <CyberCard className="col-span-1 min-h-[300px]"><div className="flex flex-col justify-between h-full"><div className="flex justify-between items-start"><div><div className="text-5xl font-light text-white">{weather.temp}°</div><div className="text-teal-400 text-sm font-bold uppercase tracking-wider mt-1">{weather.condition}</div><div className="text-slate-500 text-xs mt-1 flex items-center gap-1"><MapPin size={10} /> Stockholm</div></div><div className="w-24 h-24"><WeatherVisuals condition={weather.condition} /></div></div><div className="mt-6"><div className="text-[10px] font-bold text-slate-500 mb-3 uppercase tracking-widest">Forecast</div><div className="flex justify-between overflow-x-auto pb-2 gap-2 scrollbar-none">{forecast.slice(0, 5).map((item, idx) => (<div key={idx} className="flex flex-col items-center space-y-2 min-w-[50px]"><span className="text-[10px] text-slate-500">{item.time}</span><div className="text-slate-300">{item.condition === 'sunny' ? <Sun size={16}/> : item.condition === 'rainy' ? <CloudRain size={16}/> : <Cloud size={16}/>}</div><span className="text-xs font-bold text-white">{item.temp}°</span></div>))}</div></div></div></CyberCard>
+                        <CyberCard title="Agenda" className="col-span-1 lg:col-span-2" actionButton={<button onClick={() => setIsModalOpen(true)} className="p-1.5 rounded-lg bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 transition-colors"><Plus size={16} /></button>}><div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full"><div><div className="flex justify-between items-center mb-4 px-1"><button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()-1); setCurrentDate(d); }} className="text-slate-500 hover:text-white"><ChevronLeft size={18} /></button><span className="text-sm font-bold text-white uppercase tracking-wider">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</span><button onClick={() => { const d = new Date(currentDate); d.setMonth(d.getMonth()+1); setCurrentDate(d); }} className="text-slate-500 hover:text-white"><ChevronRight size={18} /></button></div><div className="grid grid-cols-7 gap-1 text-center mb-2">{['M','T','W','T','F','S','S'].map(d => <span key={d} className="text-[10px] font-bold text-slate-600">{d}</span>)}</div><div className="grid grid-cols-7 gap-1 place-items-center">{renderCalendarDays()}</div></div><div className="border-l border-white/5 pl-6 flex flex-col h-full"><h4 className="text-xs font-bold text-teal-500 mb-4 uppercase tracking-widest">{selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}</h4><div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">{appointments[selectedDate.toDateString()]?.length > 0 ? (appointments[selectedDate.toDateString()].map((appt) => (<div key={appt.id} className="bg-white/[0.03] hover:bg-white/[0.06] border-l-2 border-teal-500 p-3 rounded-r-lg transition-colors group flex justify-between"><div><div className="text-xs font-bold text-white mb-0.5">{appt.title}</div><div className="text-[10px] text-slate-400 font-mono">{appt.time}</div></div><button onClick={() => handleDeleteAppointment(appt.id)} className="opacity-0 group-hover:opacity-100 text-slate-600 hover:text-rose-400 transition-all"><Trash2 size={14} /></button></div>))) : (<div className="text-slate-600 italic text-xs mt-10 text-center">No events scheduled.</div>)}</div></div></div></CyberCard>
                     </div>
 
-                     {/* Notes & Plasma Clock - SIDE BY SIDE NOW */}
                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        {/* Plasma Clock Card */}
-                        <CyberCard className="col-span-1 flex items-center justify-center min-h-[200px]">
-                            <div className="flex flex-col items-center gap-4">
-                                <PlasmaClock />
-                                <div className="text-xs font-mono text-orange-400/80 tracking-[0.2em]">SYSTEM TIME</div>
-                            </div>
-                        </CyberCard>
-
-                        {/* Captain's Log Card */}
-                        <CyberCard title="Captain's Log" className="col-span-1 md:col-span-3 min-h-[200px]" actionButton={<button onClick={handleSaveLog} className="flex items-center gap-2 text-xs font-bold text-teal-400 hover:text-teal-300"><Save size={14} /> SAVE</button>}>
-                            <textarea value={logEntry} onChange={(e) => setLogEntry(e.target.value)} placeholder="Write your observations..." className="w-full h-full bg-transparent border-none outline-none resize-none text-sm text-slate-300 placeholder:text-slate-600 leading-relaxed min-h-[120px]" spellCheck="false" />
-                        </CyberCard>
+                        <CyberCard className="col-span-1 flex items-center justify-center min-h-[200px]"><div className="flex flex-col items-center gap-4"><PlasmaClock /><div className="text-xs font-mono text-orange-400/80 tracking-[0.2em]">SYSTEM TIME</div></div></CyberCard>
+                        <CyberCard title="Captain's Log" className="col-span-1 md:col-span-3 min-h-[200px]" actionButton={<button onClick={handleSaveLog} className="flex items-center gap-2 text-xs font-bold text-teal-400 hover:text-teal-300"><Save size={14} /> SAVE</button>}><textarea value={logEntry} onChange={(e) => setLogEntry(e.target.value)} placeholder="Write your observations..." className="w-full h-full bg-transparent border-none outline-none resize-none text-sm text-slate-300 placeholder:text-slate-600 leading-relaxed min-h-[120px]" spellCheck="false" /></CyberCard>
                      </div>
-
                     <AddAppointmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} selectedDate={selectedDate} onSave={handleAddAppointment} />
                 </div>
             );
@@ -1565,23 +899,12 @@ const BorealisView = ({ theme, avatar }) => {
           const [username, setUsername] = useState("Commander"); 
           const [serverUptime, setServerUptime] = useState({ d: 0, h: 0, m: 0 });
           const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '');
-          
 
           useEffect(() => { 
               const timer = setInterval(() => setCurrentTime(new Date()), 1000); 
               const getUser = async () => { const res = await authFetch('/api/user/me'); if (res && res.ok) { const data = await res.json(); setUsername(data.username); } };
-              const getHeaderUptime = async () => { 
-                  const res = await authFetch('/api/system/stats'); 
-                  if (res && res.ok) { 
-                      const s = await res.json(); 
-                      const days = Math.floor(s.uptime / (3600 * 24)); 
-                      const hours = Math.floor((s.uptime % (3600 * 24)) / 3600); 
-                      const mins = Math.floor((s.uptime % 3600) / 60);
-                      setServerUptime({ d: days, h: hours, m: mins }); 
-                  } 
-              };
-              getUser(); getHeaderUptime();
-              const uptimeInterval = setInterval(getHeaderUptime, 10000); 
+              const getHeaderUptime = async () => { const res = await authFetch('/api/system/stats'); if (res && res.ok) { const s = await res.json(); const days = Math.floor(s.uptime / (3600 * 24)); const hours = Math.floor((s.uptime % (3600 * 24)) / 3600); const mins = Math.floor((s.uptime % 3600) / 60); setServerUptime({ d: days, h: hours, m: mins }); } };
+              getUser(); getHeaderUptime(); const uptimeInterval = setInterval(getHeaderUptime, 10000); 
               return () => { clearInterval(timer); clearInterval(uptimeInterval); }
           }, []);
 
@@ -1593,7 +916,7 @@ const BorealisView = ({ theme, avatar }) => {
             { id: 'health', icon: HeartPulse, label: 'Aurora-Health' },
             { id: 'docker', icon: Box, label: 'Docker Manager' },
             { id: 'minecraft', icon: Hammer, label: 'Minecraft' },
-            { id: 'streaming', icon: Play, label: 'Cinema' },
+            { id: 'streaming', icon: Film, label: 'Cinema' },
             { id: 'borealis', icon: Sparkles, label: 'Borealis AI' },
             { id: 'storage', icon: Database, label: 'Aurora-Nova' },
             { id: 'settings', icon: Cog, label: 'Settings' }
@@ -1603,67 +926,26 @@ const BorealisView = ({ theme, avatar }) => {
             <div className={`flex h-screen w-full ${theme.bg} transition-colors duration-700 font-sans overflow-hidden relative`}>
               <ParticleBackground theme={theme} />
               
-              {/* Sidebar */}
               <aside className={`fixed md:relative top-0 left-0 h-full w-64 ${theme.sidebar} backdrop-blur-2xl transition-transform duration-300 ease-out z-40 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} pt-16 md:pt-0`}>
-                <div className="p-8 mb-2 hidden md:block">
-                    <div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
-                            <Zap size={18} fill="currentColor"/>
-                        </div>
-                        AURORA
-                    </div>
-                    <div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div>
-                </div>
-
-                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">
-                  {navItems.map(item => (
-                    <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}>
-                      <item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} />
-                      <span className="text-sm tracking-wide">{item.label}</span>
-                      {activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}
-                    </button>
-                  ))}
-                </nav>
-
-                <div className={`p-6 mt-auto`}>
-                    <button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}>
-                        <LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/>
-                        <span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span>
-                    </button>
-                </div>
+                <div className="p-8 mb-2 hidden md:block"><div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20"><Zap size={18} fill="currentColor"/></div>AURORA</div><div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div></div>
+                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">{navItems.map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}><item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} /><span className="text-sm tracking-wide">{item.label}</span>{activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}</button>))}</nav>
+                <div className={`p-6 mt-auto`}><button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}><LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/><span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span></button></div>
               </aside>
 
-              {/* Mobile Menu Button */}
-              <div className="md:hidden fixed top-4 left-4 z-50">
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">
-                    {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
-              </div>
+              <div className="md:hidden fixed top-4 left-4 z-50"><button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button></div>
 
-              {/* Main Content */}
               <main className="flex-1 overflow-y-auto p-4 md:p-10 relative scrollbar-thin scrollbar-thumb-slate-700/20 z-10">
                 <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                   {/* Breadcrumb / Title */}
-                   <div className="flex flex-col">
-                       <h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2>
-                   </div>
-
-                   {/* Status Bar */}
-                   <div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}>
-                        <div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div>
-                        <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
-                        <div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div>
-                        <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
-                        <div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                   </div>
+                   <div className="flex flex-col"><h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2></div>
+                   <div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}><div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div>
                 </header>
                 
                 {activeTab === 'neural' && <NeuralView theme={theme} username={username} />}
-                {activeTab === 'streaming' && <StreamingView theme={theme} />}
                 {activeTab === 'telemetry' && <TelemetryView theme={theme} />}
                 {activeTab === 'health' && <HealthView theme={theme} />}
                 {activeTab === 'docker' && <DockerView theme={theme} username={username} />}
                 {activeTab === 'minecraft' && <MinecraftView theme={theme} />}
+                {activeTab === 'streaming' && <StreamingView theme={theme} />}
                 {activeTab === 'borealis' && <BorealisView theme={theme} avatar={avatar} />}
                 {activeTab === 'storage' && <StorageView theme={theme} />}
                 {activeTab === 'settings' && <SettingsView username={username} theme={theme} setTheme={setTheme} avatar={avatar} setAvatar={setAvatar} />}
@@ -1677,40 +959,3 @@ const BorealisView = ({ theme, avatar }) => {
     </script>
 </body>
 </html>
-
-```
-
-Felet "Inline Babel script:503 Auto login failed. Ensure Docker Manager is running on port 8001. TypeError: Failed to fetch" beror, precis som det står, på att webbläsaren inte kan nå din Docker Manager backend på port 8001.
-
-**Det här är vad som händer:**
-Du har en backend för huvudapplikationen (sannolikt på port 8000) och en *separat* backend för Docker-hantering på port 8001. Din frontend (React-koden i `index.html`) försöker göra ett anrop (`fetch`) till `http://<din-server-ip>:8001/api/login` för att logga in automatiskt.
-
-När du får `TypeError: Failed to fetch` och `net::ERR_CONNECTION_REFUSED` betyder det att antingen:
-1.  Tjänsten på port 8001 är **inte startad**.
-2.  Tjänsten är startad men **lyssnar inte på rätt nätverksinterface** (t.ex. bara på `localhost` inne i sin container/server, men inte utåt mot ditt LAN/internet).
-3.  En **brandvägg** blockerar port 8001.
-4.  Din webbläsare blockerar anropet p.g.a **Mixed Content** (om du kör huvudappen via HTTPS men anropar Docker-backend via HTTP).
-
-**Lösning (Steg-för-steg):**
-
-1.  **Kontrollera att containern körs:**
-    Gå in på servern via SSH och kör `docker ps`. Du ska se `aurora-docker-manager` i listan och att den mappar port `0.0.0.0:8001->8000/tcp`.
-    * Om den inte körs: Kör `docker-compose up -d` i mappen `docker_manager`.
-
-2.  **Kontrollera portmappningen:**
-    I din `docker-compose.yml` för docker_manager, se till att ports är definierade så här:
-    ```yaml
-    ports:
-      - "8001:8000"
-    ```
-    Och i din `Dockerfile` eller `uvicorn`-kommando, se till att host är satt till `0.0.0.0` (inte `127.0.0.1`):
-    ```bash
-    CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    ```
-    *(Detta ser korrekt ut i filerna du skickade tidigare, men dubbelkolla på servern).*
-
-3.  **Öppna porten:**
-    Om du kör Ubuntu med UFW (brandvägg), måste du tillåta port 8001:
-    ```bash
-    sudo ufw allow 8001/tcp
-    sudo ufw reload
