@@ -1,0 +1,14 @@
+services:
+  aurora-health:
+    build: .
+    container_name: aurora-health-service
+    restart: always
+    ports:
+      - "8050:8050"
+    volumes:
+      - ./health_data.db:/app/health_data.db
+    env_file:
+      - .env
+    environment:
+      AWS_REGION: us-east-1
+      BEDROCK_MODEL_ID: anthropic.claude-3-5-sonnet-20240620-v2:0
