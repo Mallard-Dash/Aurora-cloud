@@ -92,7 +92,7 @@ def get_db():
 
 # --- Endpoints ---
 
-@app.post("/api/log", response_model=LogResponse)
+@app.post("api/log", response_model=LogResponse)
 def create_log(log: LogCreate, db: Session = Depends(get_db)):
     """Sparar daglig hälsodata"""
     db_log = DailyLog(
@@ -110,7 +110,7 @@ def create_log(log: LogCreate, db: Session = Depends(get_db)):
     response.symptomNote = db_log.notes
     return response
 
-@app.get("/api/history", response_model=List[LogResponse])
+@app.get("api/history", response_model=List[LogResponse])
 def get_history(limit: int = 30, db: Session = Depends(get_db)):
     """Hämtar historik"""
     logs = db.query(DailyLog).order_by(DailyLog.date.desc()).limit(limit).all()
@@ -122,7 +122,7 @@ def get_history(limit: int = 30, db: Session = Depends(get_db)):
         results.append(pydantic_log)
     return results
 
-@app.post("/api/analyze")
+@app.post("api/analyze")
 def analyze_health(request: AnalysisRequest, db: Session = Depends(get_db)):
     """Skickar data till AWS Bedrock för analys"""
     if not bedrock_runtime:

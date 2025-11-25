@@ -2,9 +2,11 @@ import time
 from collections import defaultdict
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from .auth import verify_password, create_access_token, get_current_user, ADMIN_USERNAME, admin_hash
-from .schemas import LoginRequest, Token, ContainerInfo, CreateContainerRequest, OperationResponse
-from ..backend.app.docker_service import list_containers, create_container, perform_action, get_templates
+
+# Use absolute imports so the module can run in CI / actions
+from backend.app.docker_manager.auth import verify_password, create_access_token, get_current_user, ADMIN_USERNAME, admin_hash
+from backend.app.docker_manager.schemas import LoginRequest, Token, ContainerInfo, CreateContainerRequest, OperationResponse
+from backend.app.docker_service import list_containers, create_container, perform_action, get_templates
 
 app = FastAPI(title="Aurora Docker Manager")
 
