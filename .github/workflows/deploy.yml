@@ -1,6 +1,6 @@
-# ...existing code...
 name: Deploy Aurora (Self-Hosted)
 
+# Runs when you push to main
 on:
   push:
     branches: [ main ]
@@ -10,6 +10,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      # 1. Checkout code from GitHub into the runner folder on your server
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -24,49 +25,51 @@ jobs:
         run: |
           echo "Updating Backend..."
           mkdir -p /home/aurora/aurora/backend
-
+          
           # Sync backend folder
-          rsync -av --delete --exclude='__pycache__' --exclude='.venv' --exclude='*.db' --exclude='templates.json' ./backend/ /home/aurora/aurora/backend/
-
+          # EXCLUDE DATA & SECRETS TO PREVENT DELETION/OVERWRITE
+          rsync -av --delete \
+            --exclude='__pycache__' \
+            --exclude='.venv' \
+            --exclude='*.db' \
+            --exclude='.env' \
+            --exclude='templates.json' \
+            ./backend/ /home/aurora/aurora/backend/
+          
           echo "Installing requirements..."
           source /home/aurora/aurora/.venv/bin/activate
-
+          
+          # Install dependencies (Check both locations for safety)
           if [ -f "/home/aurora/aurora/backend/app/requirements.txt" ]; then
               pip install -r /home/aurora/aurora/backend/app/requirements.txt
           elif [ -f "/home/aurora/aurora/backend/requirements.txt" ]; then
               pip install -r /home/aurora/aurora/backend/requirements.txt
           fi
 
-      # --- 3. HEALTH SERVICE (Docker) ---
-      - name: 🐳 Deploy Health Service
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "us-east-1"
-          BEDROCK_MODEL_ID: "anthropic.claude-3-5-sonnet-20240620-v2:0"
+      # --- 3. HEALTH SERVICE (Docker - NOW MERGED INTO MAIN APP BUT KEPT IF NEEDED) ---
+      # Note: Since we merged Health Logic into Main App, this step might be redundant 
+      # if you removed the folder. I'm keeping it safe with a check.
+      - name: 🐳 Deploy Health Service (Cleanup/Legacy)
         run: |
-          echo "Updating Health Service Container..."
-          mkdir -p /home/aurora/aurora/health_service
-          rsync -av --delete ./health_service/ /home/aurora/aurora/health_service/
-          cd /home/aurora/aurora/health_service
+          if [ -d "./health_service" ]; then
+             echo "Found legacy health_service folder. Syncing for backup but NOT starting container (Merged to Main App)."
+             mkdir -p /home/aurora/aurora/health_service
+             rsync -av --delete ./health_service/ /home/aurora/aurora/health_service/
+             
+             # OPTIONAL: Stop old container to avoid port conflicts with Main App
+             docker rm -f aurora-health-service || true
+          else
+             echo "Health Service folder gone (Merged). Skipping."
+          fi
 
-          # Create .env securely from job environment (will not print secrets)
-          cat > .env <<EOF
-          AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-          AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-          AWS_REGION=${AWS_REGION}
-          BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID}
-          EOF
-
-          docker-compose up -d --build --remove-orphans
-
-      # --- 4. DOCKER MANAGER (Optional/Standalone) ---
+      # --- 4. DOCKER MANAGER (Standalone Service) ---
       - name: 📦 Deploy Docker Manager
         run: |
           echo "Checking for Docker Manager..."
           TARGET_DIR="/home/aurora/aurora/docker_manager"
           mkdir -p $TARGET_DIR
-
+          
+          # Smart check: Find where the code lives in the repo
           if [ -d "./docker_manager" ]; then
               echo "Found docker_manager at root."
               rsync -av --delete ./docker_manager/ $TARGET_DIR/
@@ -77,15 +80,16 @@ jobs:
               echo "⚠️ Docker Manager folder not found, skipping sync."
               exit 0
           fi
-
+          
           cd $TARGET_DIR
+          # Build and start if docker-compose exists
           if [ -f "docker-compose.yml" ]; then
               docker-compose up -d --build --remove-orphans
           fi
 
-      # --- 5. RESTART SYSTEMD SERVICE ---
+      # --- 5. RESTART MAIN SERVICE ---
       - name: 🔄 Restart Aurora Service
         run: |
+          # This restarts the main python app (which now includes Health Logic)
           sudo systemctl restart aurora
           echo "✅ Deployment Complete!"
-# ...existing code...

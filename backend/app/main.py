@@ -1,6 +1,5 @@
 import logging
 import os
-import shutil
 from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,15 +21,14 @@ from .borealis_backend import router as borealis_router
 from .minecraft_backend import router as minecraft_router
 from .system_backend import router as system_router
 from .storage_backend import router as storage_router
-from .health_backend import router as health_logs_router # Gamla logg-routern
+from .health_backend import router as health_logs_router
 from .docker_backend import router as docker_router
-# NY IMPORT HÄR:
-from backend.app.aurora_health_backend import router as aurora_health_router
+from .aurora_health_backend import router as aurora_health_router 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Aurora-cloud Portal")
+app = FastAPI(title="Aurora Cloud Portal")
 
 app.add_middleware(
     CORSMiddleware,
@@ -47,12 +45,10 @@ app.include_router(system_router)
 app.include_router(storage_router)
 app.include_router(health_logs_router)
 app.include_router(docker_router)
-# AKTIVERA DEN NYA ROUTERN HÄR:
 app.include_router(aurora_health_router)
 
 @app.on_event("startup")
 async def startup_event():
-    """Körs när servern startar. Skapar tabeller och standardanvändare."""
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
@@ -80,6 +76,10 @@ class ChangePasswordReq(BaseModel):
     old_password: str
     new_password: str
 
+class UpdateUserReq(BaseModel):
+    new_username: str
+    new_email: str
+
 @app.post("/api/auth/login")
 async def login(req: LoginReq, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == req.username).first()
@@ -91,14 +91,33 @@ async def login(req: LoginReq, db: Session = Depends(get_db)):
 @app.post("/api/auth/change-password")
 async def change_password(req: ChangePasswordReq, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     if not verify_password(req.old_password, current_user.password_hash):
-        raise HTTPException(status_code=400, detail="Det gamla lösenordet är fel.")
+        raise HTTPException(status_code=400, detail="Incorrect old password.")
     current_user.password_hash = get_password_hash(req.new_password)
     db.commit()
-    return {"message": "Lösenord uppdaterat"}
+    return {"message": "Password updated"}
+
+@app.post("/api/auth/update-profile")
+async def update_user_profile(req: UpdateUserReq, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Kontrollera om namnet redan är taget av någon annan
+    existing = db.query(User).filter(User.username == req.new_username).first()
+    if existing and existing.id != current_user.id:
+        raise HTTPException(status_code=400, detail="Username already taken.")
+    
+    current_user.username = req.new_username
+    # Vi lägger till email om modellen stöder det, annars ignorera eller lägg till kolumn i models.py
+    if hasattr(current_user, "email"):
+        current_user.email = req.new_email
+        
+    db.commit()
+    
+    # Utfärda ny token eftersom identiteten ändrats
+    new_token = create_access_token({"sub": current_user.username})
+    return {"message": "Profile updated", "access_token": new_token}
 
 @app.get("/api/user/me")
 async def read_users_me(current_user: User = Depends(get_current_user)):
-    return {"username": current_user.username, "is_admin": current_user.is_admin}
+    email = getattr(current_user, "email", "")
+    return {"username": current_user.username, "email": email, "is_admin": current_user.is_admin}
 
 @app.get("/api/storage/quota")
 async def get_storage_quota(user: User = Depends(get_current_user)):
@@ -109,7 +128,8 @@ async def get_storage_quota(user: User = Depends(get_current_user)):
             if not os.path.islink(fp):
                 total_size += os.path.getsize(fp)
     limit = 30 * 1024 * 1024 * 1024 
-    return { "used": total_size, "limit": limit, "percent": min(100, (total_size / limit) * 100) }
+    percent = min(100, (total_size / limit) * 100) if limit > 0 else 0
+    return { "used": total_size, "limit": limit, "percent": percent }
 
 @app.get("/metrics")
 async def metrics():
@@ -117,4 +137,4 @@ async def metrics():
 
 @app.get("/")
 async def root():
-    return {"status": "Aurora System Online", "version": "Final"}
+    return {"status": "Aurora System Online", "version": "English Edition"}
