@@ -634,7 +634,7 @@
             );
         };
 
-        const HealthMonitorView = ({ theme, username }) => {
+const HealthMonitorView = ({ theme, username }) => {
             const [activeSubTab, setActiveSubTab] = useState('dashboard');
             const [historyData, setHistoryData] = useState([]);
             const [backendStatus, setBackendStatus] = useState('checking');
@@ -642,11 +642,9 @@
             const [aiResponse, setAiResponse] = useState(null);
             const [saving, setSaving] = useState(false);
             
-            // Uppdaterad API URL för att gå via Nginx
-            // window.location.origin ger automatiskt rätt domän/IP (t.ex. http://100.69.68.70)
+            // VIKTIGT: Denna URL matchar din Nginx-konfiguration
             const HEALTH_API = "/api/health-service";
 
-            // State från index.jsx
             const [userProfile, setUserProfile] = useState({
                 name: 'Aurora User', age: 45, gender: 'Man', history: 'Hypertoni i släkten, knäskada 2015', lifestyle: 'Stillasittande kontorsjobb, tränar 2ggr/vecka, snusar', medication: 'Ingen nuvarande medicinering'
             });
@@ -654,13 +652,18 @@
                 weight: '', waist: '', pulse: '', sys_bp: '', dia_bp: '', steps: '', stress: 5, symptoms: [], symptomNote: ''
             });
 
-            // Compass Data (Mock)
+            // Mock Data ifall backend är nere
+            const mockData = [
+                { date: '2023-10-27', day: 'Fre', weight: 81.8, pulse: 66, stress: 4, sys_bp: 124, dia_bp: 81, steps: 9000 },
+                { date: '2023-10-28', day: 'Lör', weight: 81.9, pulse: 64, stress: 2, sys_bp: 120, dia_bp: 78, steps: 11000 },
+                { date: '2023-10-29', day: 'Sön', weight: 81.7, pulse: 63, stress: 2, sys_bp: 118, dia_bp: 76, steps: 7500 },
+            ];
+
             const compassData = [
                 { subject: 'Fysik', A: 85, fullMark: 100 }, { subject: 'Sömn', A: 65, fullMark: 100 }, { subject: 'Mental', A: 70, fullMark: 100 },
                 { subject: 'Kost', A: 90, fullMark: 100 }, { subject: 'Aktivitet', A: 80, fullMark: 100 }, { subject: 'Kardio', A: 75, fullMark: 100 }
             ];
 
-            // Access Control
             if (username !== 'aurora') {
                 return (
                     <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 animate-fade-in">
@@ -673,6 +676,7 @@
 
             const fetchHistory = async () => {
                 try {
+                    // Anropar /api/health-service/history -> Nginx -> /history (Port 8050)
                     const res = await fetch(`${HEALTH_API}/history?limit=30`);
                     if (res.ok) {
                         const data = await res.json();
@@ -680,14 +684,19 @@
                             ...item,
                             day: new Date(item.date).toLocaleDateString('sv-SE', { weekday: 'short' }),
                             dateStr: new Date(item.date).toLocaleDateString('sv-SE'),
-                            stress: item.stress_level
+                            stress: item.stress_level // Mappar backend 'stress_level' till frontend 'stress'
                         })).reverse();
                         setHistoryData(formattedData);
                         setBackendStatus('online');
-                    } else throw new Error("Backend error");
+                    } else {
+                        throw new Error("Backend responded with error");
+                    }
                 } catch (err) {
-                    console.warn("Health Backend offline", err);
+                    console.warn("Health Backend offline, switching to Mock Data", err);
                     setBackendStatus('offline');
+                    // Använd mockdata vid fel
+                    const enrichedMock = mockData.map(d => ({...d, dateStr: d.date}));
+                    setHistoryData(enrichedMock);
                 }
             };
 
@@ -695,7 +704,17 @@
 
             const handleSaveLog = async () => {
                 setSaving(true);
-                const payload = { ...formData, weight: parseFloat(formData.weight)||0, waist: parseFloat(formData.waist)||0, pulse: parseInt(formData.pulse)||0, sys_bp: parseInt(formData.sys_bp)||0, dia_bp: parseInt(formData.dia_bp)||0, steps: parseInt(formData.steps)||0, stress: parseInt(formData.stress)||5, symptoms: [], symptomNote: formData.symptomNote };
+                const payload = { 
+                    weight: parseFloat(formData.weight)||0, 
+                    waist: parseFloat(formData.waist)||0, 
+                    pulse: parseInt(formData.pulse)||0, 
+                    sys_bp: parseInt(formData.sys_bp)||0, 
+                    dia_bp: parseInt(formData.dia_bp)||0, 
+                    steps: parseInt(formData.steps)||0, 
+                    stress: parseInt(formData.stress)||5, 
+                    symptoms: [], 
+                    symptomNote: formData.symptomNote 
+                };
                 
                 if (backendStatus === 'online') {
                     try {
@@ -703,7 +722,8 @@
                         if (res.ok) { alert("Logg sparad!"); finishSave(); } else alert("Kunde inte spara.");
                     } catch (e) { alert("Nätverksfel."); }
                 } else {
-                    alert("Backend offline. Starta backend.py för att spara.");
+                    alert("Backend offline (Demo Mode). Data sparades ej permanent.");
+                    finishSave();
                 }
                 setSaving(false);
             };
@@ -721,7 +741,9 @@
                         const res = await fetch(`${HEALTH_API}/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ context: "Användaren känner sig trött idag." }) });
                         if (res.ok) { const data = await res.json(); setAiResponse(data.analysis); } else setAiResponse("Kunde inte kontakta AI.");
                     } catch (e) { setAiResponse("Nätverksfel."); }
-                } else setAiResponse("Backend offline. Starta backend.py för AI-analys.");
+                } else {
+                    setTimeout(() => setAiResponse("**DEMO LÄGE:**\nEftersom backend inte svarar simuleras detta svar. Din hälsodata ser stabil ut, men jag kan inte göra en riktig AI-analys just nu."), 1500);
+                }
                 setAiLoading(false);
             };
 
@@ -760,7 +782,7 @@
                                     {!aiResponse ? (
                                         <div className="h-32 flex flex-col justify-center relative z-10">
                                             <p className="text-slate-300 mb-6 font-light text-sm">Analysera dina {historyData.length} senaste loggar med Claude 3.5 Sonnet.</p>
-                                            <button onClick={runAIAnalysis} disabled={aiLoading || historyData.length === 0} className="self-start text-xs font-bold uppercase tracking-widest text-white bg-white/5 border border-white/10 px-6 py-3 rounded-lg hover:bg-indigo-500/20 transition-all flex items-center">{aiLoading ? 'Processar...' : 'Generera Insikt'} <ChevronRight size={14} className="ml-2" /></button>
+                                            <button onClick={runAIAnalysis} disabled={aiLoading} className="self-start text-xs font-bold uppercase tracking-widest text-white bg-white/5 border border-white/10 px-6 py-3 rounded-lg hover:bg-indigo-500/20 transition-all flex items-center">{aiLoading ? 'Processar...' : 'Generera Insikt'} <ChevronRight size={14} className="ml-2" /></button>
                                         </div>
                                     ) : (
                                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 relative z-10"><div className="prose prose-invert prose-sm max-w-none text-slate-300"><p className="whitespace-pre-line leading-relaxed">{aiResponse}</p></div></div>
@@ -822,11 +844,11 @@
                     {activeSubTab === 'history' && (
                         <div className="overflow-x-auto bg-slate-900/60 border border-white/10 rounded-xl p-4">
                             <table className="w-full text-left text-sm text-slate-300">
-                                <thead className="text-xs uppercase text-slate-500 border-b border-white/10"><tr><th className="p-3">Datum</th><th className="p-3">Vikt</th><th className="p-3">BP</th><th className="p-3">Puls</th><th className="p-3">Steg</th><th className="p-3">Stress</th></tr></thead>
+                                <thead className="text-xs uppercase text-slate-500 border-b border-white/10"><tr><th className="p-3">Datum</th><th className="p-3">Vikt</th><th className="p-3">BP</th><th className="p-3">Puls</th><th className="p-3">Steg</th><th className="p-3">Stress</th><th className="p-3">Notis</th></tr></thead>
                                 <tbody className="divide-y divide-white/5">
                                     {historyData.map((row, idx) => (
                                         <tr key={idx} className="hover:bg-white/5">
-                                            <td className="p-3 font-mono">{row.dateStr}</td><td className="p-3">{row.weight}</td><td className="p-3">{row.sys_bp}/{row.dia_bp}</td><td className="p-3">{row.pulse}</td><td className="p-3">{row.steps}</td><td className="p-3">{row.stress}</td>
+                                            <td className="p-3 font-mono">{row.dateStr}</td><td className="p-3">{row.weight}</td><td className="p-3">{row.sys_bp}/{row.dia_bp}</td><td className="p-3">{row.pulse}</td><td className="p-3">{row.steps}</td><td className="p-3"><span className={`px-2 py-0.5 rounded ${row.stress > 6 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>{row.stress}</span></td><td className="p-3 text-xs italic opacity-70 truncate max-w-[150px]">{row.notes || row.symptomNote}</td>
                                         </tr>
                                     ))}
                                 </tbody>

@@ -15,10 +15,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Konfiguration ---
-# Databasen sparas lokalt i mappen där tjänsten körs
 DATABASE_URL = "sqlite:///./health_data.db"
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-# Claude 3.5 Sonnet ID (som du angav)
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v2:0") 
 
 # --- Database Setup (SQLite) ---
@@ -42,7 +40,6 @@ class DailyLog(Base):
     symptoms = Column(String, nullable=True)
     notes = Column(Text, nullable=True)
 
-# Skapa tabeller automatiskt vid start
 Base.metadata.create_all(bind=engine)
 
 # --- API Schemas ---
@@ -69,12 +66,11 @@ class AnalysisRequest(BaseModel):
 try:
     bedrock_runtime = boto3.client('bedrock-runtime', region_name=AWS_REGION)
 except Exception as e:
-    print(f"Varning: Kunde inte initiera AWS Bedrock klient. AI-funktionen kommer inte fungera. Fel: {e}")
+    print(f"Varning: AWS Bedrock ej tillgänglig: {e}")
     bedrock_runtime = None
 
 app = FastAPI(title="Aurora Health API")
 
-# CORS (Tillåter anrop från frontend)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -90,9 +86,9 @@ def get_db():
     finally:
         db.close()
 
-# --- Endpoints ---
+# --- ÄNDRADE ENDPOINTS (Tog bort 'api/' prefixet) ---
 
-@app.post("api/log", response_model=LogResponse)
+@app.post("/log", response_model=LogResponse)
 def create_log(log: LogCreate, db: Session = Depends(get_db)):
     """Sparar daglig hälsodata"""
     db_log = DailyLog(
@@ -110,7 +106,7 @@ def create_log(log: LogCreate, db: Session = Depends(get_db)):
     response.symptomNote = db_log.notes
     return response
 
-@app.get("api/history", response_model=List[LogResponse])
+@app.get("/history", response_model=List[LogResponse])
 def get_history(limit: int = 30, db: Session = Depends(get_db)):
     """Hämtar historik"""
     logs = db.query(DailyLog).order_by(DailyLog.date.desc()).limit(limit).all()
@@ -122,11 +118,11 @@ def get_history(limit: int = 30, db: Session = Depends(get_db)):
         results.append(pydantic_log)
     return results
 
-@app.post("api/analyze")
+@app.post("/analyze")
 def analyze_health(request: AnalysisRequest, db: Session = Depends(get_db)):
     """Skickar data till AWS Bedrock för analys"""
     if not bedrock_runtime:
-        return {"analysis": "AWS Bedrock är inte konfigurerat på servern."}
+        return {"analysis": "AWS Bedrock är inte konfigurerat på servern (Backend Offline/No Creds)."}
 
     logs = db.query(DailyLog).order_by(DailyLog.date.desc()).limit(14).all()
     if not logs:
@@ -136,17 +132,10 @@ def analyze_health(request: AnalysisRequest, db: Session = Depends(get_db)):
     
     prompt = f"""
     Agera som en professionell läkare och hälsocoach. Analysera följande data:
-    
     DATA SENASTE 14 DAGARNA:
     {history_text}
-    
-    ANVÄNDARENS KONTEXT JUST NU:
-    {request.context if request.context else 'Ingen specifik kontext.'}
-    
-    Uppgift:
-    1. Identifiera trender (stress vs blodtryck etc).
-    2. Ge lugnande och konkreta råd.
-    3. Svara på svenska med bra formatering.
+    KONTEXT: {request.context if request.context else 'Ingen specifik kontext.'}
+    Uppgift: Identifiera trender och ge konkreta råd. Svara på svenska.
     """
 
     body = json.dumps({
@@ -164,5 +153,4 @@ def analyze_health(request: AnalysisRequest, db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    # VIKTIGT: Lyssnar på port 8050 som Nginx förväntar sig
     uvicorn.run(app, host="0.0.0.0", port=8050)
