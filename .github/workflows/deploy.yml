@@ -1,91 +1,91 @@
+# ...existing code...
 name: Deploy Aurora (Self-Hosted)
 
 on:
-push:
-branches: [ main ]
+  push:
+    branches: [ main ]
 
 jobs:
-deploy:
-runs-on: self-hosted
+  deploy:
+    runs-on: self-hosted
 
-steps:
-- name: Checkout code
-  uses: actions/checkout@v3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-# --- 1. FRONTEND ---
-- name: 📂 Deploy Frontend
-  run: |
-    echo "Updating Frontend..."
-    # Använder sudo för att skriva till /var/www
-    sudo rsync -av --delete ./frontend/ /var/www/aurora/
+      # --- 1. FRONTEND ---
+      - name: 📂 Deploy Frontend
+        run: |
+          echo "Updating Frontend..."
+          sudo rsync -av --delete ./frontend/ /var/www/aurora/
 
-# --- 2. BACKEND (Main Python Service) ---
-- name: 🐍 Deploy Main Backend
-  run: |
-    echo "Updating Backend..."
-    mkdir -p /home/aurora/aurora/backend
-    
-    # Synkar hela backend-mappen
-    rsync -av --delete --exclude='__pycache__' --exclude='.venv' --exclude='*.db' --exclude='templates.json' ./backend/ /home/aurora/aurora/backend/
-    
-    # Installera dependencies
-    echo "Installing requirements..."
-    source /home/aurora/aurora/.venv/bin/activate
-    # Kollar om requirements ligger i root av backend eller i app
-    if [ -f "/home/aurora/aurora/backend/app/requirements.txt" ]; then
-        pip install -r /home/aurora/aurora/backend/app/requirements.txt
-    elif [ -f "/home/aurora/aurora/backend/requirements.txt" ]; then
-        pip install -r /home/aurora/aurora/backend/requirements.txt
-    fi
+      # --- 2. BACKEND (Main Python Service) ---
+      - name: 🐍 Deploy Main Backend
+        run: |
+          echo "Updating Backend..."
+          mkdir -p /home/aurora/aurora/backend
 
-# --- 3. HEALTH SERVICE (Docker) ---
-- name: 🐳 Deploy Health Service
-  run: |
-    echo "Updating Health Service Container..."
-    mkdir -p /home/aurora/aurora/health_service
-    
-    # Synka mappen health_service
-    rsync -av --delete ./health_service/ /home/aurora/aurora/health_service/
-    
-    cd /home/aurora/aurora/health_service
-    
-    # Skapa .env fil med AWS-nycklar (Hämtas från GitHub Secrets)
-    # Byt ut mot klartext om du inte använder secrets, men var försiktig!
-    echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" > .env
-    echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
-    echo "AWS_REGION=us-east-1" >> .env
-    echo "BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20240620-v2:0" >> .env
-    
-    # Starta om container
-    docker-compose up -d --build --remove-orphans
+          # Sync backend folder
+          rsync -av --delete --exclude='__pycache__' --exclude='.venv' --exclude='*.db' --exclude='templates.json' ./backend/ /home/aurora/aurora/backend/
 
-# --- 4. DOCKER MANAGER (Optional/Standalone) ---
-- name: 📦 Deploy Docker Manager
-  run: |
-    echo "Checking for Docker Manager..."
-    TARGET_DIR="/home/aurora/aurora/docker_manager"
-    mkdir -p $TARGET_DIR
-    
-    # Smart kontroll: Hitta var koden ligger i repot
-    if [ -d "./docker_manager" ]; then
-        echo "Found docker_manager at root."
-        rsync -av --delete ./docker_manager/ $TARGET_DIR/
-    elif [ -d "./backend/app/docker_manager" ]; then
-        echo "Found docker_manager inside backend/app."
-        rsync -av --delete ./backend/app/docker_manager/ $TARGET_DIR/
-    else
-        echo "⚠️ Docker Manager folder not found, skipping sync."
-        exit 0
-    fi
-    
-    cd $TARGET_DIR
-    # Bygg och starta om det finns en docker-compose
-    if [ -f "docker-compose.yml" ]; then
-        docker-compose up -d --build --remove-orphans
-    fi
+          echo "Installing requirements..."
+          source /home/aurora/aurora/.venv/bin/activate
 
-# --- 5. RESTART SYSTEMD SERVICE ---
-- name: 🔄 Restart Aurora Service
-  run: |
-    sudo systemctl restart aurora
-    echo "✅ Deployment Complete!"
+          if [ -f "/home/aurora/aurora/backend/app/requirements.txt" ]; then
+              pip install -r /home/aurora/aurora/backend/app/requirements.txt
+          elif [ -f "/home/aurora/aurora/backend/requirements.txt" ]; then
+              pip install -r /home/aurora/aurora/backend/requirements.txt
+          fi
+
+      # --- 3. HEALTH SERVICE (Docker) ---
+      - name: 🐳 Deploy Health Service
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "us-east-1"
+          BEDROCK_MODEL_ID: "anthropic.claude-3-5-sonnet-20240620-v2:0"
+        run: |
+          echo "Updating Health Service Container..."
+          mkdir -p /home/aurora/aurora/health_service
+          rsync -av --delete ./health_service/ /home/aurora/aurora/health_service/
+          cd /home/aurora/aurora/health_service
+
+          # Create .env securely from job environment (will not print secrets)
+          cat > .env <<EOF
+          AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+          AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+          AWS_REGION=${AWS_REGION}
+          BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID}
+          EOF
+
+          docker-compose up -d --build --remove-orphans
+
+      # --- 4. DOCKER MANAGER (Optional/Standalone) ---
+      - name: 📦 Deploy Docker Manager
+        run: |
+          echo "Checking for Docker Manager..."
+          TARGET_DIR="/home/aurora/aurora/docker_manager"
+          mkdir -p $TARGET_DIR
+
+          if [ -d "./docker_manager" ]; then
+              echo "Found docker_manager at root."
+              rsync -av --delete ./docker_manager/ $TARGET_DIR/
+          elif [ -d "./backend/app/docker_manager" ]; then
+              echo "Found docker_manager inside backend/app."
+              rsync -av --delete ./backend/app/docker_manager/ $TARGET_DIR/
+          else
+              echo "⚠️ Docker Manager folder not found, skipping sync."
+              exit 0
+          fi
+
+          cd $TARGET_DIR
+          if [ -f "docker-compose.yml" ]; then
+              docker-compose up -d --build --remove-orphans
+          fi
+
+      # --- 5. RESTART SYSTEMD SERVICE ---
+      - name: 🔄 Restart Aurora Service
+        run: |
+          sudo systemctl restart aurora
+          echo "✅ Deployment Complete!"
+# ...existing code...
