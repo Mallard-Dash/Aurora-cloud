@@ -644,7 +644,7 @@
             
             // Uppdaterad API URL för att gå via Nginx
             // window.location.origin ger automatiskt rätt domän/IP (t.ex. http://100.69.68.70)
-            const HEALTH_API = `${window.location.origin}/api/health-service`;
+            const HEALTH_API = "/api/health-service";
 
             // State från index.jsx
             const [userProfile, setUserProfile] = useState({
