@@ -60,15 +60,16 @@ def create_container_endpoint(payload: Dict):
 
     client = get_client()
     try:
-        container = client.containers.run(
-            template["image"],
-            command=template.get("command"),
-            name=name,
-            detach=True,
-            ports={f"{p}/tcp": None for p in template.get("ports", []) or []},
-            # NYTT: Lägg till volumes om det finns i mallen
-            volumes={v.split(":")[0]: {'bind': v.split(":")[1], 'mode': 'rw'} for v in template.get("volumes", [])}
-        )
+            container = client.containers.run(
+                template["image"],
+                command=template.get("command"),
+                name=name,
+                detach=True,
+                ports={f"{p}/tcp": None for p in template.get("ports", []) or []},
+                volumes={v.split(":")[0]: {'bind': v.split(":")[1], 'mode': 'rw'} for v in template.get("volumes", [])},
+                # LÄGG TILL DENNA RAD:
+                environment=template.get("env", {}) 
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
