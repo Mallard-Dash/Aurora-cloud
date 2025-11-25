@@ -88,12 +88,9 @@
 
         const authFetch = async (url, options = {}) => {
             const token = localStorage.getItem('aurora_token') || "preview_token";
-            const headers = {
-                ...options.headers,
-                'Authorization': `Bearer ${token}`
-            };
+            const headers = { ...options.headers, 'Authorization': `Bearer ${token}` };
             
-            // Only add JSON content type if not FormData (file upload)
+            // VIKTIGT: Sätt inte Content-Type om det är filuppladdning (FormData)
             if (!(options.body instanceof FormData)) {
                 headers['Content-Type'] = 'application/json';
             }
@@ -105,8 +102,8 @@
                     window.location.href = '/login.html';
                 }
                 return res;
-            } catch (e) {
-                console.warn(`API fallback for ${url}`, e);
+            } catch (e) { 
+                console.warn(`API fallback for ${url}`, e); 
                 return null; 
             }
         };
@@ -627,137 +624,103 @@
         };
 
         // --- HEALTH MONITOR VIEW (New AI Version - English) ---
-        const HealthMonitorView = ({ theme, username }) => {
-            const [activeSubTab, setActiveSubTab] = useState('dashboard');
-            const [historyData, setHistoryData] = useState([]);
-            const [backendStatus, setBackendStatus] = useState('checking');
-            const [aiLoading, setAiLoading] = useState(false);
-            const [aiResponse, setAiResponse] = useState(null);
-            const [saving, setSaving] = useState(false);
+const HealthMonitorView = ({ theme, username }) => {
+    const [activeSubTab, setActiveSubTab] = useState('dashboard');
+    const [historyData, setHistoryData] = useState([]);
+    const [backendStatus, setBackendStatus] = useState('checking');
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiResponse, setAiResponse] = useState(null);
+    const [saving, setSaving] = useState(false);
+    
+    const HEALTH_API = "/api/health-service";
+    const [userProfile, setUserProfile] = useState({ name: '', age: '', gender: 'Other', history: '', lifestyle: '', medication: '' });
+    const [formData, setFormData] = useState({ weight: '', waist: '', pulse: '', sys_bp: '', dia_bp: '', steps: '', stress: 5, symptoms: [], symptomNote: '' });
+    const compassData = [ { subject: 'Physique', A: 85, fullMark: 100 }, { subject: 'Sleep', A: 65, fullMark: 100 }, { subject: 'Mental', A: 70, fullMark: 100 }, { subject: 'Diet', A: 90, fullMark: 100 }, { subject: 'Activity', A: 80, fullMark: 100 }, { subject: 'Cardio', A: 75, fullMark: 100 } ];
+
+    useEffect(() => { fetchHistory(); fetchProfile(); }, []);
+
+    const fetchProfile = async () => { try { const res = await authFetch(`${HEALTH_API}/profile`); if (res && res.ok) setUserProfile(await res.json()); } catch(e) {} };
+    
+    const fetchHistory = async () => { 
+        try { 
+            const res = await authFetch(`${HEALTH_API}/history?limit=30`); 
+            if (res && res.ok) { 
+                const data = await res.json(); 
+                setHistoryData(data.map(item => ({ ...item, dateStr: new Date(item.date).toLocaleDateString('en-GB'), stress: item.stress_level })).reverse()); 
+                setBackendStatus('online'); 
+            } else { throw new Error("Failed to fetch"); }
+        } catch (err) { 
+            setBackendStatus('offline'); 
+            setHistoryData([]); 
+        } 
+    };
+    
+    const handleSaveProfile = async () => { 
+        setSaving(true); 
+        try { 
+            const res = await authFetch(`${HEALTH_API}/profile`, { method: 'POST', body: JSON.stringify(userProfile) }); 
+            if(res && res.ok) alert("Profile updated!"); 
+            else {
+                try { const err = await res.json(); alert("Failed: " + (err.detail || "Unknown error")); }
+                catch (jsonErr) { alert(`Server Error (${res.status}): Database might be read-only.`); }
+            }
+        } catch(e) { alert("Network Error: " + e.message); } 
+        setSaving(false); 
+    };
+
+    const handleSaveLog = async () => { 
+        setSaving(true); 
+        const payload = { ...formData, weight: parseFloat(formData.weight)||0, waist: parseFloat(formData.waist)||0, pulse: parseInt(formData.pulse)||0, sys_bp: parseInt(formData.sys_bp)||0, dia_bp: parseInt(formData.dia_bp)||0, steps: parseInt(formData.steps)||0, stress: parseInt(formData.stress)||5, symptoms: [], symptomNote: formData.symptomNote }; 
+        try { 
+            const res = await authFetch(`${HEALTH_API}/log`, { method: 'POST', body: JSON.stringify(payload) }); 
             
-            const HEALTH_API = "/api/health-service";
+            if (!res) { alert("Network Connection Failed"); setSaving(false); return; }
 
-            const [userProfile, setUserProfile] = useState({
-                name: '', age: '', gender: 'Other', history: '', lifestyle: '', medication: ''
-            });
+            if (res.ok) { 
+                alert("Log saved successfully!"); 
+                fetchHistory(); 
+                setFormData({...formData, symptomNote: ''}); 
+            } else {
+                try { const err = await res.json(); alert("Server Error: " + (err.detail || "Could not save")); }
+                catch (jsonErr) { alert(`Server Error (${res.status}): Check backend permissions.`); }
+            }
+        } catch (e) { alert("Unexpected Error: " + e.message); } 
+        setSaving(false); 
+    };
+
+    const runAIAnalysis = async () => { 
+        setAiLoading(true); 
+        try { 
+            const res = await authFetch(`${HEALTH_API}/analyze`, { method: 'POST', body: JSON.stringify({ context: "User requested analysis." }) }); 
             
-            const [formData, setFormData] = useState({
-                weight: '', waist: '', pulse: '', sys_bp: '', dia_bp: '', steps: '', stress: 5, symptoms: [], symptomNote: ''
-            });
+            if (!res) { setAiResponse("Network Connection Failed."); setAiLoading(false); return; }
 
-            const compassData = [ { subject: 'Physique', A: 85, fullMark: 100 }, { subject: 'Sleep', A: 65, fullMark: 100 }, { subject: 'Mental', A: 70, fullMark: 100 }, { subject: 'Diet', A: 90, fullMark: 100 }, { subject: 'Activity', A: 80, fullMark: 100 }, { subject: 'Cardio', A: 75, fullMark: 100 } ];
+            if (res.ok) { 
+                const data = await res.json(); 
+                setAiResponse(data.analysis); 
+            } else {
+                try { const err = await res.json(); setAiResponse("Error: " + (err.detail || "AI Service Failed")); }
+                catch (jsonErr) { setAiResponse(`Server Error (${res.status})`); }
+            }
+        } catch (e) { setAiResponse("Connection Error: Check server logs."); } 
+        setAiLoading(false); 
+    };
+    
+    const latest = historyData.length > 0 ? historyData[historyData.length - 1] : {};
 
-            useEffect(() => { fetchHistory(); fetchProfile(); }, []);
-
-            const fetchProfile = async () => {
-                try {
-                    const res = await authFetch(`${HEALTH_API}/profile`);
-                    if (res && res.ok) setUserProfile(await res.json());
-                } catch(e) {}
-            };
-
-            const fetchHistory = async () => {
-                try {
-                    const res = await authFetch(`${HEALTH_API}/history?limit=30`);
-                    if (res && res.ok) {
-                        const data = await res.json();
-                        setHistoryData(data.map(item => ({ ...item, dateStr: new Date(item.date).toLocaleDateString('en-GB'), stress: item.stress_level })).reverse());
-                        setBackendStatus('online');
-                    } else { throw new Error("Error"); }
-                } catch (err) { setBackendStatus('offline'); setHistoryData([]); }
-            };
-
-            const handleSaveProfile = async () => {
-                setSaving(true);
-                try {
-                    const res = await authFetch(`${HEALTH_API}/profile`, { method: 'POST', body: JSON.stringify(userProfile) });
-                    if(res && res.ok) alert("Profile updated!"); else alert("Failed to update profile.");
-                } catch(e) { alert("Error saving profile."); }
-                setSaving(false);
-            };
-
-            const handleSaveLog = async () => {
-                setSaving(true);
-                const payload = { ...formData, weight: parseFloat(formData.weight)||0, waist: parseFloat(formData.waist)||0, pulse: parseInt(formData.pulse)||0, sys_bp: parseInt(formData.sys_bp)||0, dia_bp: parseInt(formData.dia_bp)||0, steps: parseInt(formData.steps)||0, stress: parseInt(formData.stress)||5, symptoms: [], symptomNote: formData.symptomNote };
-                if (backendStatus === 'online') {
-                    try {
-                        const res = await authFetch(`${HEALTH_API}/log`, { method: 'POST', body: JSON.stringify(payload) });
-                        if (res && res.ok) { alert("Log saved!"); fetchHistory(); setFormData({...formData, symptomNote: ''}); }
-                    } catch (e) { alert("Network error."); }
-                } else alert("Backend offline.");
-                setSaving(false);
-            };
-
-            const runAIAnalysis = async () => {
-                setAiLoading(true);
-                if (backendStatus === 'online') {
-                    try {
-                        const res = await authFetch(`${HEALTH_API}/analyze`, { method: 'POST', body: JSON.stringify({ context: "User requested analysis." }) });
-                        if (res && res.ok) { const data = await res.json(); setAiResponse(data.analysis); }
-                    } catch (e) { setAiResponse("Network error."); }
-                } else setAiResponse("Backend offline.");
-                setAiLoading(false);
-            };
-
-            const latest = historyData.length > 0 ? historyData[historyData.length - 1] : {};
-
-            const StatCard = ({ title, value, unit, trend, icon: Icon, colorClass }) => (
-                <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 p-5 rounded-xl flex flex-col justify-between hover:border-white/20 transition-all hover:bg-slate-900/60 group">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={`p-2 rounded-lg ${colorClass} bg-opacity-10 group-hover:scale-110 transition-transform duration-300`}><Icon size={20} className={colorClass.replace('bg-', 'text-')} /></div>
-                  </div>
-                  <div><p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">{title}</p><div className="flex items-baseline space-x-1"><span className="text-2xl font-bold text-slate-100 font-mono">{value || "-"}</span><span className="text-sm text-slate-500">{unit}</span></div></div>
-                </div>
-            );
-
-            return (
-                <div className="animate-fade-in space-y-6">
-                    <div className="flex gap-4 mb-6 border-b border-white/5 pb-4 overflow-x-auto">
-                        {['dashboard', 'log', 'history', 'profile'].map(tab => (
-                            <button key={tab} onClick={() => setActiveSubTab(tab)} className={`px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${activeSubTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-slate-400'}`}>{tab}</button>
-                        ))}
-                        <div className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold border ${backendStatus === 'online' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : 'border-rose-500/30 text-rose-400 bg-rose-500/10'}`}>{backendStatus === 'online' ? <Wifi size={12}/> : <WifiOff size={12}/>} {backendStatus === 'online' ? 'ONLINE' : 'OFFLINE'}</div>
-                    </div>
-
-                    {activeSubTab === 'dashboard' && (
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="md:col-span-3 bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-indigo-500/20 rounded-xl p-6 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-10"><Brain size={100} className="text-indigo-200" /></div>
-                                <h3 className="text-indigo-400 text-sm font-mono mb-4 flex items-center relative z-10"><span className="w-2 h-2 bg-indigo-400 rounded-full mr-2 animate-pulse"></span>AI HEALTH COACH (CLAUDE 3.5)</h3>
-                                {!aiResponse ? (
-                                    <div className="h-32 flex flex-col justify-center relative z-10"><p className="text-slate-300 mb-6 font-light text-sm">Analyze your {historyData.length} latest logs.</p><button onClick={runAIAnalysis} disabled={aiLoading || historyData.length === 0} className="self-start text-xs font-bold uppercase tracking-widest text-white bg-white/5 border border-white/10 px-6 py-3 rounded-lg hover:bg-indigo-500/20 transition-all">{aiLoading ? 'Processing...' : 'Generate Insights'}</button></div>
-                                ) : (<div className="animate-in fade-in relative z-10"><div className="prose prose-invert prose-sm max-w-none text-slate-300"><p className="whitespace-pre-line leading-relaxed">{aiResponse}</p></div></div>)}
-                            </div>
-                            <div className="md:col-span-1 bg-slate-900/40 border border-white/10 rounded-xl p-2 h-48"><ResponsiveContainer width="100%" height="100%"><RadarChart cx="50%" cy="50%" outerRadius="70%" data={compassData}><PolarGrid stroke="#334155" strokeOpacity={0.5} /><PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 8 }} /><PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} /><Radar name="Health" dataKey="A" stroke="#818cf8" strokeWidth={2} fill="#6366f1" fillOpacity={0.4} /></RadarChart></ResponsiveContainer></div>
-                            <GlowCard title="Weight" icon={Scale}><div className="text-2xl font-bold text-blue-400">{latest.weight || "-"} <span className="text-xs text-slate-500">kg</span></div></GlowCard>
-                            <GlowCard title="Blood Pressure" icon={Heart}><div className="text-2xl font-bold text-rose-400">{latest.sys_bp ? `${latest.sys_bp}/${latest.dia_bp}` : "-"} <span className="text-xs text-slate-500">mmHg</span></div></GlowCard>
-                            <GlowCard title="Stress" icon={Brain}><div className="text-2xl font-bold text-purple-400">{latest.stress || "-"} <span className="text-xs text-slate-500">/ 10</span></div></GlowCard>
-                            <GlowCard title="Activity" icon={Activity}><div className="text-2xl font-bold text-emerald-400">{latest.steps || "-"} <span className="text-xs text-slate-500">steps</span></div></GlowCard>
-                        </div>
-                    )}
-
-                    {activeSubTab === 'log' && (
-                        <div className="max-w-2xl mx-auto bg-slate-900/60 border border-white/10 rounded-xl p-8 space-y-6">
-                            <h2 className="text-xl font-light text-white mb-4">Daily Log</h2>
-                            <div className="grid grid-cols-2 gap-4"><input type="number" placeholder="Weight (kg)" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /><input type="number" placeholder="Waist (cm)" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /></div>
-                            <div className="grid grid-cols-3 gap-2"><input type="number" placeholder="Sys BP" value={formData.sys_bp} onChange={e => setFormData({...formData, sys_bp: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /><input type="number" placeholder="Dia BP" value={formData.dia_bp} onChange={e => setFormData({...formData, dia_bp: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /><input type="number" placeholder="Pulse" value={formData.pulse} onChange={e => setFormData({...formData, pulse: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /></div>
-                            <input type="number" placeholder="Steps" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" />
-                            <div><label className="text-xs text-slate-400">Stress (1-10): {formData.stress}</label><input type="range" min="1" max="10" value={formData.stress} onChange={(e) => setFormData({...formData, stress: e.target.value})} className="w-full h-2 bg-slate-800 rounded-lg cursor-pointer accent-indigo-500" /></div>
-                            <textarea className="w-full h-24 bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white resize-none" placeholder="Notes / Symptoms..." value={formData.symptomNote} onChange={e => setFormData({...formData, symptomNote: e.target.value})}></textarea>
-                            <button onClick={handleSaveLog} disabled={saving} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg">{saving ? "Saving..." : "Save Entry"}</button>
-                        </div>
-                    )}
-
-                    {activeSubTab === 'history' && (
-                        <div className="overflow-x-auto bg-slate-900/60 border border-white/10 rounded-xl p-4"><table className="w-full text-left text-sm text-slate-300"><thead className="text-xs uppercase text-slate-500 border-b border-white/10"><tr><th className="p-3">Date</th><th className="p-3">Weight</th><th className="p-3">BP</th><th className="p-3">Pulse</th><th className="p-3">Steps</th><th className="p-3">Stress</th><th className="p-3">Note</th></tr></thead><tbody className="divide-y divide-white/5">{historyData.length > 0 ? historyData.map((row, idx) => (<tr key={idx} className="hover:bg-white/5"><td className="p-3 font-mono">{row.dateStr}</td><td className="p-3">{row.weight}</td><td className="p-3">{row.sys_bp}/{row.dia_bp}</td><td className="p-3">{row.pulse}</td><td className="p-3">{row.steps}</td><td className="p-3"><span className={`px-2 py-0.5 rounded ${row.stress > 6 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>{row.stress}</span></td><td className="p-3 text-xs italic opacity-70 truncate max-w-[150px]">{row.notes || row.symptomNote}</td></tr>)) : (<tr><td colSpan="7" className="p-8 text-center text-slate-500 italic">No data logged yet.</td></tr>)}</tbody></table></div>
-                    )}
-
-                    {activeSubTab === 'profile' && (
-                        <div className="max-w-2xl mx-auto bg-slate-900/60 border border-white/10 rounded-xl p-8 space-y-6"><h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2"><User size={20} /> Health Profile</h3><p className="text-slate-400 text-xs">This data provides context for the AI Coach.</p><div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-500 block mb-1">Name / Alias</label><input type="text" value={userProfile.name} onChange={e => setUserProfile({...userProfile, name: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded p-2 text-white" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Age</label><input type="number" value={userProfile.age} onChange={e => setUserProfile({...userProfile, age: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded p-2 text-white" /></div></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Gender</label><select value={userProfile.gender} onChange={e => setUserProfile({...userProfile, gender: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded p-2 text-white"><option>Male</option><option>Female</option><option>Other</option></select></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Medical History</label><textarea value={userProfile.history} onChange={e => setUserProfile({...userProfile, history: e.target.value})} className="w-full h-20 bg-slate-950/50 border border-slate-700 rounded p-2 text-white resize-none" placeholder="e.g. Asthma, Knee surgery..." /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Lifestyle</label><textarea value={userProfile.lifestyle} onChange={e => setUserProfile({...userProfile, lifestyle: e.target.value})} className="w-full h-20 bg-slate-950/50 border border-slate-700 rounded p-2 text-white resize-none" placeholder="Sedentary job, Gym 2x/week..." /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Medication</label><input type="text" value={userProfile.medication} onChange={e => setUserProfile({...userProfile, medication: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded p-2 text-white" /></div><div className="pt-4 flex justify-end"><button onClick={handleSaveProfile} disabled={saving} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg transition-all">{saving ? "Saving..." : "Save Profile"}</button></div></div>
-                    )}
-                </div>
-            );
-        };
+    return (
+        <div className="animate-fade-in space-y-6">
+            <div className="flex gap-4 mb-6 border-b border-white/5 pb-4 overflow-x-auto">
+                {['dashboard', 'log', 'history', 'profile'].map(tab => (<button key={tab} onClick={() => setActiveSubTab(tab)} className={`px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${activeSubTab === tab ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-slate-400'}`}>{tab}</button>))}
+                <div className={`ml-auto flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold border ${backendStatus === 'online' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : 'border-rose-500/30 text-rose-400 bg-rose-500/10'}`}>{backendStatus === 'online' ? <Wifi size={12}/> : <WifiOff size={12}/>} {backendStatus === 'online' ? 'ONLINE' : 'OFFLINE'}</div>
+            </div>
+            {activeSubTab === 'dashboard' && ( <div className="grid grid-cols-1 md:grid-cols-4 gap-4"><div className="md:col-span-3 bg-gradient-to-br from-slate-900/80 to-slate-900/40 border border-indigo-500/20 rounded-xl p-6 relative overflow-hidden"><div className="absolute top-0 right-0 p-4 opacity-10"><Brain size={100} className="text-indigo-200" /></div><h3 className="text-indigo-400 text-sm font-mono mb-4 flex items-center relative z-10"><span className="w-2 h-2 bg-indigo-400 rounded-full mr-2 animate-pulse"></span>AI HEALTH COACH (CLAUDE 3.5)</h3>{!aiResponse ? (<div className="h-32 flex flex-col justify-center relative z-10"><p className="text-slate-300 mb-6 font-light text-sm">Analyze your latest logs.</p><button onClick={runAIAnalysis} disabled={aiLoading} className="self-start text-xs font-bold uppercase tracking-widest text-white bg-white/5 border border-white/10 px-6 py-3 rounded-lg hover:bg-indigo-500/20 transition-all">{aiLoading ? 'Processing...' : 'Generate Insights'}</button></div>) : (<div className="animate-in fade-in relative z-10"><div className="prose prose-invert prose-sm max-w-none text-slate-300"><p className="whitespace-pre-line leading-relaxed">{aiResponse}</p></div></div>)}</div><div className="md:col-span-1 bg-slate-900/40 border border-white/10 rounded-xl p-2 h-48"><ResponsiveContainer width="100%" height="100%"><RadarChart cx="50%" cy="50%" outerRadius="70%" data={compassData}><PolarGrid stroke="#334155" strokeOpacity={0.5} /><PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 8 }} /><PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} /><Radar name="Health" dataKey="A" stroke="#818cf8" strokeWidth={2} fill="#6366f1" fillOpacity={0.4} /></RadarChart></ResponsiveContainer></div><GlowCard title="Weight" icon={Scale}><div className="text-2xl font-bold text-blue-400">{latest.weight || "-"} <span className="text-xs text-slate-500">kg</span></div></GlowCard><GlowCard title="Blood Pressure" icon={Heart}><div className="text-2xl font-bold text-rose-400">{latest.sys_bp ? `${latest.sys_bp}/${latest.dia_bp}` : "-"} <span className="text-xs text-slate-500">mmHg</span></div></GlowCard><GlowCard title="Stress" icon={Brain}><div className="text-2xl font-bold text-purple-400">{latest.stress || "-"} <span className="text-xs text-slate-500">/ 10</span></div></GlowCard><GlowCard title="Activity" icon={Activity}><div className="text-2xl font-bold text-emerald-400">{latest.steps || "-"} <span className="text-xs text-slate-500">steps</span></div></GlowCard></div> )}
+            {activeSubTab === 'log' && ( <div className="max-w-2xl mx-auto bg-slate-900/60 border border-white/10 rounded-xl p-8 space-y-6"><h2 className="text-xl font-light text-white mb-4">Daily Log</h2><div className="grid grid-cols-2 gap-4"><input type="number" placeholder="Weight (kg)" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /><input type="number" placeholder="Waist (cm)" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /></div><div className="grid grid-cols-3 gap-2"><input type="number" placeholder="Sys BP" value={formData.sys_bp} onChange={e => setFormData({...formData, sys_bp: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /><input type="number" placeholder="Dia BP" value={formData.dia_bp} onChange={e => setFormData({...formData, dia_bp: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /><input type="number" placeholder="Pulse" value={formData.pulse} onChange={e => setFormData({...formData, pulse: e.target.value})} className="bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /></div><input type="number" placeholder="Steps" value={formData.steps} onChange={e => setFormData({...formData, steps: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white" /><div><label className="text-xs text-slate-400">Stress (1-10): {formData.stress}</label><input type="range" min="1" max="10" value={formData.stress} onChange={(e) => setFormData({...formData, stress: e.target.value})} className="w-full h-2 bg-slate-800 rounded-lg cursor-pointer accent-indigo-500" /></div><textarea className="w-full h-24 bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-white resize-none" placeholder="Notes / Symptoms..." value={formData.symptomNote} onChange={e => setFormData({...formData, symptomNote: e.target.value})}></textarea><button onClick={handleSaveLog} disabled={saving} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg">{saving ? "Saving..." : "Save Entry"}</button></div> )}
+            {activeSubTab === 'history' && ( <div className="overflow-x-auto bg-slate-900/60 border border-white/10 rounded-xl p-4"><table className="w-full text-left text-sm text-slate-300"><thead className="text-xs uppercase text-slate-500 border-b border-white/10"><tr><th className="p-3">Date</th><th className="p-3">Weight</th><th className="p-3">BP</th><th className="p-3">Pulse</th><th className="p-3">Steps</th><th className="p-3">Stress</th><th className="p-3">Note</th></tr></thead><tbody className="divide-y divide-white/5">{historyData.length > 0 ? historyData.map((row, idx) => (<tr key={idx} className="hover:bg-white/5"><td className="p-3 font-mono">{row.dateStr}</td><td className="p-3">{row.weight}</td><td className="p-3">{row.sys_bp}/{row.dia_bp}</td><td className="p-3">{row.pulse}</td><td className="p-3">{row.steps}</td><td className="p-3"><span className={`px-2 py-0.5 rounded ${row.stress > 6 ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>{row.stress}</span></td><td className="p-3 text-xs italic opacity-70 truncate max-w-[150px]">{row.notes || row.symptomNote}</td></tr>)) : (<tr><td colSpan="7" className="p-8 text-center text-slate-500 italic">No data logged yet.</td></tr>)}</tbody></table></div> )}
+            {activeSubTab === 'profile' && ( <div className="max-w-2xl mx-auto bg-slate-900/60 border border-white/10 rounded-xl p-8 space-y-6"><h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2"><User size={20} /> Health Profile</h3><div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-slate-500 block mb-1">Name / Alias</label><input type="text" value={userProfile.name} onChange={e => setUserProfile({...userProfile, name: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded p-2 text-white" /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Age</label><input type="number" value={userProfile.age} onChange={e => setUserProfile({...userProfile, age: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded p-2 text-white" /></div></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Gender</label><select value={userProfile.gender} onChange={e => setUserProfile({...userProfile, gender: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded p-2 text-white"><option>Male</option><option>Female</option><option>Other</option></select></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Medical History</label><textarea value={userProfile.history} onChange={e => setUserProfile({...userProfile, history: e.target.value})} className="w-full h-20 bg-slate-950/50 border border-slate-700 rounded p-2 text-white resize-none" placeholder="e.g. Asthma, Knee surgery..." /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Lifestyle</label><textarea value={userProfile.lifestyle} onChange={e => setUserProfile({...userProfile, lifestyle: e.target.value})} className="w-full h-20 bg-slate-950/50 border border-slate-700 rounded p-2 text-white resize-none" placeholder="Sedentary job..." /></div><div><label className="text-xs font-bold text-slate-500 block mb-1">Medication</label><input type="text" value={userProfile.medication} onChange={e => setUserProfile({...userProfile, medication: e.target.value})} className="w-full bg-slate-950/50 border border-slate-700 rounded p-2 text-white" /></div><div className="pt-4 flex justify-end"><button onClick={handleSaveProfile} disabled={saving} className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-lg transition-all">{saving ? "Saving..." : "Save Profile"}</button></div></div> )}
+        </div>
+    );
+};
 
         // --- SYSTEM LOGS VIEW (Renamed from old Health) ---
         const SystemLogsView = ({ theme }) => {
@@ -829,53 +792,42 @@
         };
 
         const StorageView = ({ theme }) => {
-          const [currentPath, setCurrentPath] = useState([]);
-          const [files, setFiles] = useState([]);
-          const [quota, setQuota] = useState({ used: 0, limit: 30 * 1024 * 1024 * 1024 });
-
-          const fetchFiles = async () => {
-             const res = await authFetch('/api/storage/list?path=' + (currentPath.length > 0 ? currentPath.join('/') : ''));
-             if (res && res.ok) { const data = await res.json(); setFiles(data.files || []); }
-             const qRes = await authFetch('/api/storage/quota');
-             if (qRes && qRes.ok) setQuota(await qRes.json());
-          };
-          useEffect(() => { fetchFiles(); }, [currentPath]);
-          
-          const handleUpload = async (e) => {
-             const files = e.target.files; if (!files || files.length === 0) return;
-             const formData = new FormData(); const relPath = currentPath.length > 0 ? currentPath.join('/') : "";
-             formData.append('path', relPath); for(let i = 0; i < files.length; i++) { formData.append('files', files[i]); }
-             const res = await authFetch('/api/storage/upload', { method: 'POST', body: formData });
-             if(res && res.ok) { fetchFiles(); alert("Upload successful!"); } else alert("Upload failed.");
-          };
-
-          const handleDownload = async (name) => {
-              const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name;
-              try {
-                  const res = await authFetch(`/api/storage/download?path=${relPath}`);
-                  if (res && res.ok) {
-                      const blob = await res.blob();
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = name;
-                      document.body.appendChild(a);
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                      document.body.removeChild(a);
-                  } else {
-                      alert("Download failed. File might be missing.");
-                  }
-              } catch (e) { alert("Network error during download."); }
-          };
-
-          const handleDelete = async (name) => { 
-              if(!confirm("Permanently delete " + name + "?")) return;
-              const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name;
-              const res = await authFetch('/api/storage/delete', { method: 'POST', body: JSON.stringify({ path: relPath }) });
-              if(res && res.ok) fetchFiles(); else alert("Delete failed.");
-          };
-          
+        const [currentPath, setCurrentPath] = useState([]);
+        const [files, setFiles] = useState([]);
+        const [quota, setQuota] = useState({ used: 0, limit: 30 * 1024 * 1024 * 1024 });
+        const fetchFiles = async () => { const res = await authFetch('/api/storage/list?path=' + (currentPath.length > 0 ? currentPath.join('/') : '')); if (res && res.ok) { const data = await res.json(); setFiles(data.files || []); } const qRes = await authFetch('/api/storage/quota'); if (qRes && qRes.ok) setQuota(await qRes.json()); };
+        useEffect(() => { fetchFiles(); }, [currentPath]);
+        const handleUpload = async (e) => { const files = e.target.files; if (!files || files.length === 0) return; const formData = new FormData(); const relPath = currentPath.length > 0 ? currentPath.join('/') : ""; formData.append('path', relPath); for(let i = 0; i < files.length; i++) { formData.append('files', files[i]); } const res = await authFetch('/api/storage/upload', { method: 'POST', body: formData }); if(res && res.ok) { fetchFiles(); alert("Upload successful!"); } else alert("Upload failed."); };
+        
+        const handleDownload = async (name) => {
+            const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name;
+            try {
+                // Fix för att få med auth-token vid nedladdning
+                const res = await authFetch(`/api/storage/download?path=${relPath}`);
+                if (res && res.ok) {
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = name;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else { alert("Download failed."); }
+            } catch (e) { alert("Network error."); }
+        };
+        const handleDelete = async (name) => { if(!confirm("Permanently delete " + name + "?")) return; const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name; const res = await authFetch('/api/storage/delete', { method: 'POST', body: JSON.stringify({ path: relPath }) }); if(res && res.ok) fetchFiles(); else alert("Delete failed."); };
+        const getIcon = (type) => type === 'dir' ? <Folder size={18} className="text-amber-400"/> : <File size={18} className="text-indigo-400"/>;
+        const usedPercent = Math.min(100, (quota.used / quota.limit) * 100);
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <GlowCard title="Storage Capacity" icon={HardDrive} className="md:col-span-3"><div className="flex flex-col gap-3 w-full px-4"><div className="flex justify-between text-xs font-medium text-slate-400 tracking-wider"><span>USED: {formatBytes(quota.used)}</span><span className="text-teal-400 font-bold">{usedPercent.toFixed(1)}%</span><span>TOTAL: {formatBytes(quota.limit)}</span></div><div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden relative"><div style={{ width: `${usedPercent}%` }} className="h-full bg-gradient-to-r from-teal-600 to-cyan-500 rounded-full transition-all duration-1000" /></div></div></GlowCard>
+                <Card title="Aurora-Nova Explorer" icon={Folder} theme={theme}><div className={`flex items-center gap-2 mb-6 p-2 ${theme.inputBg} rounded-lg border ${theme.border}`}><button onClick={() => setCurrentPath(p => p.length > 0 ? p.slice(0, -1) : p)} disabled={currentPath.length === 0} className={`p-2 hover:bg-black/5 rounded-md disabled:opacity-30 ${theme.text}`}><CornerLeftUp size={16} /></button><div className={`font-mono text-sm ${theme.accent} flex-1 ml-2 tracking-tight`}>ROOT / {currentPath.join(' / ')}</div><div className="flex gap-2"><label className="cursor-pointer p-2 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 rounded-md text-xs font-bold flex items-center gap-2 transition-colors"><Plus size={14} /> UPLOAD<input type="file" className="hidden" multiple onChange={handleUpload} /></label></div></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{files.map((file, i) => (<div key={i} className={`${theme.id === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.02] border-white/5'} border hover:border-teal-500/30 p-3 rounded-lg flex items-center justify-between group transition-all cursor-pointer`}><div className="flex items-center gap-3 overflow-hidden" onClick={() => file.type === 'dir' && setCurrentPath(p => [...p, file.name])}><div className={`p-2 rounded-md ${theme.id === 'light' ? 'bg-white border border-slate-200' : 'bg-black/20'}`}>{getIcon(file.type)}</div><div className="overflow-hidden"><div className={`text-sm font-medium truncate ${theme.text}`}>{file.name}</div>{file.type !== 'dir' && <div className={`text-[10px] ${theme.textDim}`}>{formatBytes(file.size || 0)}</div>}</div></div><div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">{file.type !== 'dir' && <button onClick={(e) => {e.stopPropagation(); handleDownload(file.name)}} className="p-1.5 hover:bg-teal-500/10 text-slate-500 hover:text-teal-400 rounded transition-all"><Download size={14} /></button>}<button onClick={(e) => {e.stopPropagation(); handleDelete(file.name)}} className="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded transition-all"><Trash2 size={14} /></button></div></div>))}</div></Card>
+            </div>
+        );
+        };
+      
           const getIcon = (type) => type === 'dir' ? <Folder size={18} className="text-amber-400 fill-amber-400/20"/> : <File size={18} className="text-indigo-400"/>;
           const usedPercent = Math.min(100, (quota.used / quota.limit) * 100);
 
@@ -1231,32 +1183,29 @@
         };
 
         // --- MAIN APP ---
-        function AuroraOS() {
-          const [activeTab, setActiveTab] = useState('neural');
-          const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-          const [currentTime, setCurrentTime] = useState(new Date());
-          const [theme, setTheme] = useState(THEMES.cyberpunk); 
-          const [user, setUser] = useState({ username: "Commander", email: "" }); 
-          const [serverUptime, setServerUptime] = useState({ d: 0, h: 0, m: 0 });
-          const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '');
+        const AuroraOS = () => {
+        const [activeTab, setActiveTab] = useState('neural');
+        const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+        const [currentTime, setCurrentTime] = useState(new Date());
+        const [theme, setTheme] = useState(THEMES.cyberpunk); 
+        const [user, setUser] = useState({ username: "Commander", email: "" }); 
+        const [serverUptime, setServerUptime] = useState({ d: 0, h: 0, m: 0 });
+        const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '');
 
-          useEffect(() => { 
-              const timer = setInterval(() => setCurrentTime(new Date()), 1000); 
-              const getUser = async () => { 
-                  const res = await authFetch('/api/user/me'); 
-                  if (res && res.ok) { 
-                      const data = await res.json(); 
-                      setUser({ username: data.username, email: data.email });
-                  } 
-              };
-              const getHeaderUptime = async () => { const res = await authFetch('/api/system/stats'); if (res && res.ok) { const s = await res.json(); const days = Math.floor(s.uptime / (3600 * 24)); const hours = Math.floor((s.uptime % (3600 * 24)) / 3600); const mins = Math.floor((s.uptime % 3600) / 60); setServerUptime({ d: days, h: hours, m: mins }); } };
-              getUser(); getHeaderUptime(); const uptimeInterval = setInterval(getHeaderUptime, 10000); 
-              return () => { clearInterval(timer); clearInterval(uptimeInterval); }
-          }, []);
+        useEffect(() => { 
+            const timer = setInterval(() => setCurrentTime(new Date()), 1000); 
+            const getUser = async () => { 
+                const res = await authFetch('/api/user/me'); 
+                if (res && res.ok) { const data = await res.json(); setUser({ username: data.username, email: data.email }); } 
+            };
+            const getHeaderUptime = async () => { const res = await authFetch('/api/system/stats'); if (res && res.ok) { const s = await res.json(); const days = Math.floor(s.uptime / (3600 * 24)); const hours = Math.floor((s.uptime % (3600 * 24)) / 3600); const mins = Math.floor((s.uptime % 3600) / 60); setServerUptime({ d: days, h: hours, m: mins }); } };
+            getUser(); getHeaderUptime(); const uptimeInterval = setInterval(getHeaderUptime, 10000); 
+            return () => { clearInterval(timer); clearInterval(uptimeInterval); }
+        }, []);
 
-          const handleLogout = () => { localStorage.removeItem('aurora_token'); window.location.href = '/login.html'; };
+        const handleLogout = () => { localStorage.removeItem('aurora_token'); window.location.href = '/login.html'; };
 
-          const navItems = [
+        const navItems = [
             { id: 'neural', icon: Home, label: 'Home' },
             { id: 'telemetry', icon: Activity, label: 'Aurora-Pulstar' },
             { id: 'borealis', icon: Sparkles, label: 'Borealis AI' },
@@ -1267,26 +1216,20 @@
             { id: 'streaming', icon: Film, label: 'Cinema' },
             { id: 'storage', icon: Database, label: 'Aurora-Nova' },
             { id: 'settings', icon: Cog, label: 'Settings' }
-          ];
+        ];
 
-          return (
+        return (
             <div className={`flex h-screen w-full ${theme.bg} transition-colors duration-700 font-sans overflow-hidden relative`}>
-              <ParticleBackground theme={theme} />
-              
-              <aside className={`fixed md:relative top-0 left-0 h-full w-64 ${theme.sidebar} backdrop-blur-2xl transition-transform duration-300 ease-out z-40 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} pt-16 md:pt-0`}>
+            <ParticleBackground theme={theme} />
+            <aside className={`fixed md:relative top-0 left-0 h-full w-64 ${theme.sidebar} backdrop-blur-2xl transition-transform duration-300 ease-out z-40 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} pt-16 md:pt-0`}>
                 <div className="p-8 mb-2 hidden md:block"><div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20"><Zap size={18} fill="currentColor"/></div>AURORA</div><div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div></div>
                 <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">{navItems.map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}><item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} /><span className="text-sm tracking-wide">{item.label}</span>{activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}</button>))}</nav>
                 <div className={`p-6 mt-auto`}><button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}><LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/><span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span></button></div>
-              </aside>
-
-              <div className="md:hidden fixed top-4 left-4 z-50"><button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg bg-slate-900/80 backdrop-blur border border-white/10 text-white">{isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}</button></div>
-
-              <main className="flex-1 overflow-y-auto p-4 md:p-10 relative scrollbar-thin scrollbar-thumb-slate-700/20 z-10">
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                   <div className="flex flex-col"><h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2></div>
-                   <div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}><div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div>
-                </header>
+            </aside>
+            <main className="flex-1 overflow-y-auto p-4 md:p-10 relative scrollbar-thin scrollbar-thumb-slate-700/20 z-10">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4"><div className="flex flex-col"><h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2></div><div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}><div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div></header>
                 
+                {/* VIEWS */}
                 {activeTab === 'neural' && <NeuralView theme={theme} username={user.username} />}
                 {activeTab === 'telemetry' && <TelemetryView theme={theme} />}
                 {activeTab === 'health' && <SystemLogsView theme={theme} />}
@@ -1296,11 +1239,11 @@
                 {activeTab === 'streaming' && <StreamingView theme={theme} />}
                 {activeTab === 'borealis' && <BorealisView theme={theme} avatar={avatar} />}
                 {activeTab === 'storage' && <StorageView theme={theme} />}
-                {activeTab === 'settings' && <SettingsView username={user.username} userEmail={user.email} theme={theme} setTheme={setTheme} avatar={avatar} setAvatar={setAvatar} navItems={navItems} />}
-              </main>
+                {activeTab === 'settings' && <SettingsView username={user.username} userEmail={user.email} theme={theme} setTheme={setTheme} avatar={avatar} setAvatar={setAvatar} />}
+            </main>
             </div>
-          );
-        }
+        );
+        };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<AuroraOS />);
