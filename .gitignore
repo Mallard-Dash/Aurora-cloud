@@ -11,3 +11,5 @@ instance/*.db
 /build
 .vscode
 *.db
+backend/app/templates.json
+templates.json
