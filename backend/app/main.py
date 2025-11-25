@@ -22,8 +22,10 @@ from .borealis_backend import router as borealis_router
 from .minecraft_backend import router as minecraft_router
 from .system_backend import router as system_router
 from .storage_backend import router as storage_router
-from .health_backend import router as health_router
-from .docker_backend import router as docker_router # <--- NY ROUTER
+from .health_backend import router as health_logs_router # Gamla logg-routern
+from .docker_backend import router as docker_router
+# NY IMPORT HÄR:
+from backend.app.aurora_health_backend import router as aurora_health_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,8 +45,10 @@ app.include_router(borealis_router)
 app.include_router(minecraft_router)
 app.include_router(system_router)
 app.include_router(storage_router)
-app.include_router(health_router)
-app.include_router(docker_router) # <--- AKTIVERA HÄR
+app.include_router(health_logs_router)
+app.include_router(docker_router)
+# AKTIVERA DEN NYA ROUTERN HÄR:
+app.include_router(aurora_health_router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -114,17 +118,3 @@ async def metrics():
 @app.get("/")
 async def root():
     return {"status": "Aurora System Online", "version": "Final"}
-
-from fastapi import APIRouter
-# Importera logiken från docker_service.py som du laddade upp
-from .docker_service import list_containers, get_templates, create_container, perform_action
-
-docker_router = APIRouter(prefix="/api/docker", tags=["docker"])
-
-@docker_router.get("/containers")
-def get_docker_containers():
-    return list_containers()
-
-@docker_router.get("/templates")
-def get_docker_templates():
-    return get_templates()
