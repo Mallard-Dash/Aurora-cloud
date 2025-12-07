@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html
+    lang="en"
+>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aurora Server Portal</title>
     
-    <!-- 1. SECURITY CHECK -->
     <script>
         try {
             const token = localStorage.getItem('aurora_token');
@@ -15,10 +16,8 @@
         } catch (e) { console.warn("Auth-check skipped"); }
     </script>
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Import Map -->
     <script type="importmap">
     {
         "imports": {
@@ -30,10 +29,8 @@
     }
     </script>
 
-    <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&family=VT323&display=swap" rel="stylesheet">
 
     <style>
@@ -525,7 +522,7 @@
             const [selectedTemplate, setSelectedTemplate] = useState("");
             const [showGuide, setShowGuide] = useState(true);
 
-            if (username !== 'aurora') {
+            if (username !== 'Vincent') {
                 return (
                     <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 animate-fade-in">
                         <div className="p-6 rounded-full bg-rose-500/10 border border-rose-500/20 mb-4"><LockKeyhole size={48} className="text-rose-500" /></div>
@@ -792,42 +789,33 @@ const HealthMonitorView = ({ theme, username }) => {
         };
 
         const StorageView = ({ theme }) => {
-        const [currentPath, setCurrentPath] = useState([]);
-        const [files, setFiles] = useState([]);
-        const [quota, setQuota] = useState({ used: 0, limit: 30 * 1024 * 1024 * 1024 });
-        const fetchFiles = async () => { const res = await authFetch('/api/storage/list?path=' + (currentPath.length > 0 ? currentPath.join('/') : '')); if (res && res.ok) { const data = await res.json(); setFiles(data.files || []); } const qRes = await authFetch('/api/storage/quota'); if (qRes && qRes.ok) setQuota(await qRes.json()); };
-        useEffect(() => { fetchFiles(); }, [currentPath]);
-        const handleUpload = async (e) => { const files = e.target.files; if (!files || files.length === 0) return; const formData = new FormData(); const relPath = currentPath.length > 0 ? currentPath.join('/') : ""; formData.append('path', relPath); for(let i = 0; i < files.length; i++) { formData.append('files', files[i]); } const res = await authFetch('/api/storage/upload', { method: 'POST', body: formData }); if(res && res.ok) { fetchFiles(); alert("Upload successful!"); } else alert("Upload failed."); };
+          const [currentPath, setCurrentPath] = useState([]);
+          const [files, setFiles] = useState([]);
+          const [quota, setQuota] = useState({ used: 0, limit: 30 * 1024 * 1024 * 1024 });
+          const fetchFiles = async () => { const res = await authFetch('/api/storage/list?path=' + (currentPath.length > 0 ? currentPath.join('/') : '')); if (res && res.ok) { const data = await res.json(); setFiles(data.files || []); } const qRes = await authFetch('/api/storage/quota'); if (qRes && qRes.ok) setQuota(await qRes.json()); };
+          useEffect(() => { fetchFiles(); }, [currentPath]);
+          const handleUpload = async (e) => { const files = e.target.files; if (!files || files.length === 0) return; const formData = new FormData(); const relPath = currentPath.length > 0 ? currentPath.join('/') : ""; formData.append('path', relPath); for(let i = 0; i < files.length; i++) { formData.append('files', files[i]); } const res = await authFetch('/api/storage/upload', { method: 'POST', body: formData }); if(res && res.ok) { fetchFiles(); alert("Upload successful!"); } else alert("Upload failed."); };
+          
+          const handleDownload = async (name) => {
+              const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name;
+              try {
+                  // Fix för att få med auth-token vid nedladdning
+                  const res = await authFetch(`/api/storage/download?path=${relPath}`);
+                  if (res && res.ok) {
+                      const blob = await res.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = name;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      document.body.removeChild(a);
+                  } else { alert("Download failed."); }
+              } catch (e) { alert("Network error."); }
+          };
+          const handleDelete = async (name) => { if(!confirm("Permanently delete " + name + "?")) return; const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name; const res = await authFetch('/api/storage/delete', { method: 'POST', body: JSON.stringify({ path: relPath }) }); if(res && res.ok) fetchFiles(); else alert("Delete failed."); };
         
-        const handleDownload = async (name) => {
-            const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name;
-            try {
-                // Fix för att få med auth-token vid nedladdning
-                const res = await authFetch(`/api/storage/download?path=${relPath}`);
-                if (res && res.ok) {
-                    const blob = await res.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = name;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                } else { alert("Download failed."); }
-            } catch (e) { alert("Network error."); }
-        };
-        const handleDelete = async (name) => { if(!confirm("Permanently delete " + name + "?")) return; const relPath = currentPath.length > 0 ? currentPath.join('/') + '/' + name : name; const res = await authFetch('/api/storage/delete', { method: 'POST', body: JSON.stringify({ path: relPath }) }); if(res && res.ok) fetchFiles(); else alert("Delete failed."); };
-        const getIcon = (type) => type === 'dir' ? <Folder size={18} className="text-amber-400"/> : <File size={18} className="text-indigo-400"/>;
-        const usedPercent = Math.min(100, (quota.used / quota.limit) * 100);
-        return (
-            <div className="space-y-6 animate-fade-in">
-                <GlowCard title="Storage Capacity" icon={HardDrive} className="md:col-span-3"><div className="flex flex-col gap-3 w-full px-4"><div className="flex justify-between text-xs font-medium text-slate-400 tracking-wider"><span>USED: {formatBytes(quota.used)}</span><span className="text-teal-400 font-bold">{usedPercent.toFixed(1)}%</span><span>TOTAL: {formatBytes(quota.limit)}</span></div><div className="h-4 w-full bg-slate-800/50 rounded-full overflow-hidden relative"><div style={{ width: `${usedPercent}%` }} className="h-full bg-gradient-to-r from-teal-600 to-cyan-500 rounded-full transition-all duration-1000" /></div></div></GlowCard>
-                <Card title="Aurora-Nova Explorer" icon={Folder} theme={theme}><div className={`flex items-center gap-2 mb-6 p-2 ${theme.inputBg} rounded-lg border ${theme.border}`}><button onClick={() => setCurrentPath(p => p.length > 0 ? p.slice(0, -1) : p)} disabled={currentPath.length === 0} className={`p-2 hover:bg-black/5 rounded-md disabled:opacity-30 ${theme.text}`}><CornerLeftUp size={16} /></button><div className={`font-mono text-sm ${theme.accent} flex-1 ml-2 tracking-tight`}>ROOT / {currentPath.join(' / ')}</div><div className="flex gap-2"><label className="cursor-pointer p-2 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 rounded-md text-xs font-bold flex items-center gap-2 transition-colors"><Plus size={14} /> UPLOAD<input type="file" className="hidden" multiple onChange={handleUpload} /></label></div></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">{files.map((file, i) => (<div key={i} className={`${theme.id === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.02] border-white/5'} border hover:border-teal-500/30 p-3 rounded-lg flex items-center justify-between group transition-all cursor-pointer`}><div className="flex items-center gap-3 overflow-hidden" onClick={() => file.type === 'dir' && setCurrentPath(p => [...p, file.name])}><div className={`p-2 rounded-md ${theme.id === 'light' ? 'bg-white border border-slate-200' : 'bg-black/20'}`}>{getIcon(file.type)}</div><div className="overflow-hidden"><div className={`text-sm font-medium truncate ${theme.text}`}>{file.name}</div>{file.type !== 'dir' && <div className={`text-[10px] ${theme.textDim}`}>{formatBytes(file.size || 0)}</div>}</div></div><div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">{file.type !== 'dir' && <button onClick={(e) => {e.stopPropagation(); handleDownload(file.name)}} className="p-1.5 hover:bg-teal-500/10 text-slate-500 hover:text-teal-400 rounded transition-all"><Download size={14} /></button>}<button onClick={(e) => {e.stopPropagation(); handleDelete(file.name)}} className="p-1.5 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded transition-all"><Trash2 size={14} /></button></div></div>))}</div></Card>
-            </div>
-        );
-        };
-      
           const getIcon = (type) => type === 'dir' ? <Folder size={18} className="text-amber-400 fill-amber-400/20"/> : <File size={18} className="text-indigo-400"/>;
           const usedPercent = Math.min(100, (quota.used / quota.limit) * 100);
 
@@ -885,7 +873,7 @@ const HealthMonitorView = ({ theme, username }) => {
                 <header className="flex flex-col md:flex-row justify-between items-end pb-6 mb-2"><div><h1 className="text-3xl md:text-4xl font-bold text-white flex items-center gap-3 tracking-tight">Minecraft<span className="text-teal-400 font-light">Server</span></h1><p className="text-xs font-mono text-slate-400 mt-2 flex items-center gap-2"><Server size={12}/> AURORA-YMIR-1 // DOCKER CONTAINER</p></div><div className={`flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 mt-4 md:mt-0`}><div className={`w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor] ${status === 'ONLINE' ? 'bg-emerald-400 text-emerald-400' : status === 'OFFLINE' ? 'bg-rose-500 text-rose-500' : 'bg-amber-400 text-amber-400'}`}></div><span className="text-sm font-bold tracking-wide text-slate-200">{status}</span></div></header>
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
                     <div className="lg:col-span-1 space-y-4">
-                       <MinecraftCard title="Control Panel" icon={Settings}><div className="grid gap-3"><button onClick={handleStart} disabled={status !== 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all shadow-lg ${status === 'OFFLINE' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:to-emerald-400 text-white' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}><Play size={16} fill="currentColor" /> START</button><button onClick={() => { handleStop(); setTimeout(handleStart, 5000); }} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status === 'ONLINE' ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><RotateCcw size={16} /> RESTART</button><button onClick={handleStop} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status !== 'OFFLINE' ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><Square size={16} fill="currentColor" /> STOP</button></div></MinecraftCard>
+                       <MinecraftCard title="Control Panel" icon={Settings}><div className="grid gap-3"><button onClick={handleStart} disabled={status !== 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all ${status === 'OFFLINE' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:to-emerald-400 text-white' : 'bg-slate-800 text-slate-600 cursor-not-allowed'}`}><Play size={16} fill="currentColor" /> START</button><button onClick={() => { handleStop(); setTimeout(handleStart, 5000); }} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status === 'ONLINE' ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><RotateCcw size={16} /> RESTART</button><button onClick={handleStop} disabled={status === 'OFFLINE'} className={`p-3 rounded-lg flex items-center justify-center gap-3 font-bold text-xs transition-all border ${status !== 'OFFLINE' ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'}`}><Square size={16} fill="currentColor" /> STOP</button></div></MinecraftCard>
                        <MinecraftCard title="Players" icon={Users}><div className="flex justify-between items-end mb-2"><span className="text-3xl font-light text-white">{players}</span><span className="text-xs text-slate-500 mb-1 uppercase font-bold">/ {maxPlayers} Online</span></div><div className="h-1.5 w-full bg-slate-800/50 rounded-full overflow-hidden"><div className="h-full bg-teal-500 transition-all duration-500" style={{ width: `${(players/maxPlayers)*100}%` }} /></div></MinecraftCard>
                        <div className="grid grid-cols-2 gap-4"><MinecraftCard title="TPS" icon={Activity} className="items-center justify-center text-center"><div className={`text-xl font-bold ${tps >= 18 ? 'text-emerald-400' : 'text-amber-400'}`}>{tps.toFixed(1)}</div></MinecraftCard><MinecraftCard title="RAM" icon={MemoryStick} className="items-center justify-center text-center"><div className="text-xl font-bold text-indigo-400">{ramUsage.toFixed(1)}G</div></MinecraftCard></div>
                     </div>
@@ -964,7 +952,7 @@ const HealthMonitorView = ({ theme, username }) => {
                     </div>
                     {status === 'running' ? (
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
-                            <div className="lg:col-span-1 space-y-3"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Library Access</h3>{categories.map(cat => (<button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all duration-300 group relative overflow-hidden ${activeCategory === cat.id ? `${cat.bg} ${cat.border}` : 'bg-slate-900/40 border-white/5 hover:border-white/10'}`}><div className={`p-3 rounded-lg bg-slate-950 ${cat.color} group-hover:scale-110 transition-transform`}><cat.icon size={24} /></div><div className="text-left z-10"><div className={`font-bold text-lg ${activeCategory === cat.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{cat.label}</div><div className="text-[10px] text-slate-500 uppercase tracking-wider">{cat.id} Library</div></div>{activeCategory === cat.id && <div className={`absolute right-0 top-0 bottom-0 w-1 ${cat.color.replace('text-', 'bg-')}`}></div>}</button>))}</div>
+                            <div className="lg:col-span-1 space-y-3"><h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Library Access</h3>{categories.map(cat => (<button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`w-full p-4 rounded-xl border flex items-center gap-4 transition-all duration-300 group relative overflow-hidden ${activeCategory === cat.id ? `${cat.bg} ${cat.border}` : 'bg-slate-900/40 border-white/5 hover:border-white/10'}`}><div className={`p-3 rounded-lg bg-slate-950 ${cat.color} group-hover:scale-110 transition-transform`}><cat.icon size={24} /></div><div className="text-left z-10"><div className={`font-bold text-lg ${activeCategory === cat.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>{cat.label}</div><div className="text-[10px] text-slate-500 uppercase tracking-wider">{cat.id} Library</div></div>{activeCategory === cat.id && <div className={`absolute right-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}</button>))}</div>
                             <div className="lg:col-span-2 relative overflow-hidden rounded-2xl border border-white/5 bg-slate-900/50 group"><div className={`absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 pointer-events-none transition-colors duration-700 ${activeCatData.bg.replace('/10', '/30').replace('bg-', 'bg-gradient-to-br from-')}`}></div><div className="absolute inset-0 flex flex-col items-center justify-center text-center p-10 z-10"><div className={`p-6 rounded-full mb-6 ${activeCatData.bg} ${activeCatData.color} shadow-[0_0_50px_rgba(0,0,0,0.5)]`}><activeCatData.icon size={64} strokeWidth={1} /></div><h2 className="text-3xl font-bold text-white mb-2">{activeCatData.desc}</h2><p className="text-slate-400 max-w-md mx-auto mb-8">Stream your personal {activeCatData.label.toLowerCase()} collection directly from Aurora Storage to any device in your network.</p><a href={jellyfinUrl} target="_blank" className="px-8 py-3 rounded-full border border-white/20 hover:bg-white/10 text-white font-bold tracking-widest text-xs transition-all">OPEN LIBRARY</a></div></div>
                         </div>
                     ) : (
@@ -997,7 +985,7 @@ const HealthMonitorView = ({ theme, username }) => {
 
             useEffect(() => {
                 // Load users only if admin
-                if (username === 'aurora') {
+                if (username === 'Vincent') {
                     fetchUsers();
                 }
             }, [username]);
@@ -1092,8 +1080,8 @@ const HealthMonitorView = ({ theme, username }) => {
                 <Card title="User Configuration" icon={Cog} theme={theme}>
                     <div className="grid gap-6">
                         <div className="flex items-center gap-6 pb-6 border-b border-white/5">
-                            <div className="relative group"><div className="w-24 h-24 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg overflow-hidden">{avatar ? <img src={avatar} className="w-full h-full object-cover" /> : username[0].toUpperCase()}</div><label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full"><Camera size={24} className="text-white" /><input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} /></label></div>
-                            <div><h3 className={`text-xl font-bold ${theme.text}`}>{username}</h3><p className={`text-sm ${theme.textDim}`}>User Level: {username === 'aurora' ? 'Root Administrator' : 'Authorized User'}</p></div>
+                            <div className="relative group"><div className="w-24 h-24 rounded-full bg-gradient-to-tr from-teal-500 to-blue-600 flex items-center justify-center text-3xl font-bold text-white shadow-lg overflow-hidden">{avatar ? <img src={avatar} className="w-full h-full object-cover" /> : username[0].toUpperCase()}</div><label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-full"><Camera size={24} className="text-white" /><input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} /></label></div>
+                            <div><h3 className={`text-xl font-bold ${theme.text}`}>{username}</h3><p className={`text-sm ${theme.textDim} mt-1`}>User Level: {username === 'Vincent' ? 'Root Administrator' : 'Authorized User'}</p></div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div><label className={`text-xs font-bold ${theme.textDim} uppercase tracking-wider mb-2 block`}>Username</label><input type="text" value={formData.newUsername} onChange={e => setFormData({...formData, newUsername: e.target.value})} className={`w-full ${theme.inputBg} border ${theme.border} rounded-lg p-3 text-sm ${theme.text}`} /></div>
@@ -1104,7 +1092,7 @@ const HealthMonitorView = ({ theme, username }) => {
                 </Card>
 
                 {/* 2. IAM / PERMISSIONS CARD (AURORA ONLY) */}
-                {username === 'aurora' && (
+                {username === 'Vincent' && (
                     <Card title="IAM Access Control" icon={ShieldCheck} theme={theme} className="border-teal-500/30">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
@@ -1122,17 +1110,17 @@ const HealthMonitorView = ({ theme, username }) => {
                                             <td className={`p-3 font-bold ${theme.text} flex items-center gap-2`}>
                                                 <div className="w-6 h-6 rounded bg-slate-700 flex items-center justify-center text-[10px]">{u.username[0].toUpperCase()}</div>
                                                 {u.username}
-                                                {u.username === 'aurora' && <span className="text-[10px] bg-teal-500/20 text-teal-400 px-1 rounded ml-2">ROOT</span>}
+                                                {u.username === 'Vincent' && <span className="text-[10px] bg-teal-500/20 text-teal-400 px-1 rounded ml-2">ROOT</span>}
                                             </td>
                                             {navItems.filter(n => n.id !== 'settings' && n.id !== 'neural').map(nav => {
-                                                const hasAccess = u.permissions?.includes(nav.id) || u.username === 'aurora'; // Aurora always has access
-                                                const isAdmin = u.username === 'aurora';
+                                                const hasAccess = u.permissions?.includes(nav.id) || u.username === 'Vincent'; // Aurora always has access
+                                                const isAdmin = u.username === 'Vincent';
                                                 return (
                                                     <td key={nav.id} className="p-3 text-center">
                                                         <button 
                                                             onClick={() => !isAdmin && togglePermission(u.username, nav.id)}
                                                             disabled={isAdmin}
-                                                            className={`w-4 h-4 rounded border flex items-center justify-center transition-all mx-auto ${hasAccess ? 'bg-teal-500 border-teal-500 text-white' : 'bg-transparent border-slate-600 text-transparent'}`}
+                                                            className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${hasAccess ? 'bg-teal-500 border-teal-500 text-white' : 'bg-transparent border-slate-600 text-transparent'}`}
                                                         >
                                                             <Check size={10} strokeWidth={4} />
                                                         </button>
@@ -1182,67 +1170,115 @@ const HealthMonitorView = ({ theme, username }) => {
             );
         };
 
-        // --- MAIN APP ---
+// --- MAIN APP ---
         const AuroraOS = () => {
-        const [activeTab, setActiveTab] = useState('neural');
-        const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-        const [currentTime, setCurrentTime] = useState(new Date());
-        const [theme, setTheme] = useState(THEMES.cyberpunk); 
-        const [user, setUser] = useState({ username: "Commander", email: "" }); 
-        const [serverUptime, setServerUptime] = useState({ d: 0, h: 0, m: 0 });
-        const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '');
+            const [activeTab, setActiveTab] = useState('neural');
+            const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+            const [currentTime, setCurrentTime] = useState(new Date());
+            const [theme, setTheme] = useState(THEMES.cyberpunk); 
+            const [user, setUser] = useState({ username: "Commander", email: "" }); 
+            const [serverUptime, setServerUptime] = useState({ d: 0, h: 0, m: 0 });
+            const [avatar, setAvatar] = useState(localStorage.getItem('user_avatar') || '');
 
-        useEffect(() => { 
-            const timer = setInterval(() => setCurrentTime(new Date()), 1000); 
-            const getUser = async () => { 
-                const res = await authFetch('/api/user/me'); 
-                if (res && res.ok) { const data = await res.json(); setUser({ username: data.username, email: data.email }); } 
-            };
-            const getHeaderUptime = async () => { const res = await authFetch('/api/system/stats'); if (res && res.ok) { const s = await res.json(); const days = Math.floor(s.uptime / (3600 * 24)); const hours = Math.floor((s.uptime % (3600 * 24)) / 3600); const mins = Math.floor((s.uptime % 3600) / 60); setServerUptime({ d: days, h: hours, m: mins }); } };
-            getUser(); getHeaderUptime(); const uptimeInterval = setInterval(getHeaderUptime, 10000); 
-            return () => { clearInterval(timer); clearInterval(uptimeInterval); }
-        }, []);
+            useEffect(() => { 
+                const timer = setInterval(() => setCurrentTime(new Date()), 1000); 
+                const getUser = async () => { 
+                    const res = await authFetch('/api/user/me'); 
+                    if (res && res.ok) { const data = await res.json(); setUser({ username: data.username, email: data.email }); } 
+                };
+                const getHeaderUptime = async () => { const res = await authFetch('/api/system/stats'); if (res && res.ok) { const s = await res.json(); const days = Math.floor(s.uptime / (3600 * 24)); const hours = Math.floor((s.uptime % (3600 * 24)) / 3600); const mins = Math.floor((s.uptime % 3600) / 60); setServerUptime({ d: days, h: hours, m: mins }); } };
+                getUser(); getHeaderUptime(); const uptimeInterval = setInterval(getHeaderUptime, 10000); 
+                return () => { clearInterval(timer); clearInterval(uptimeInterval); }
+            }, []);
 
-        const handleLogout = () => { localStorage.removeItem('aurora_token'); window.location.href = '/login.html'; };
+            const handleLogout = () => { localStorage.removeItem('aurora_token'); window.location.href = '/login.html'; };
 
-        const navItems = [
-            { id: 'neural', icon: Home, label: 'Home' },
-            { id: 'telemetry', icon: Activity, label: 'Aurora-Pulstar' },
-            { id: 'borealis', icon: Sparkles, label: 'Borealis AI' },
-            { id: 'health_monitor', icon: Stethoscope, label: 'Health Center' },
-            { id: 'health', icon: HeartPulse, label: 'System Health' },
-            { id: 'docker', icon: Box, label: 'Docker Manager' },
-            { id: 'minecraft', icon: Hammer, label: 'Minecraft' },
-            { id: 'streaming', icon: Film, label: 'Cinema' },
-            { id: 'storage', icon: Database, label: 'Aurora-Nova' },
-            { id: 'settings', icon: Cog, label: 'Settings' }
-        ];
+            const navItems = [
+                { id: 'neural', icon: Home, label: 'Home' },
+                { id: 'telemetry', icon: Activity, label: 'Aurora-Pulstar' },
+                { id: 'borealis', icon: Sparkles, label: 'Borealis AI' },
+                { id: 'health_monitor', icon: Stethoscope, label: 'Health Center' },
+                { id: 'health', icon: HeartPulse, label: 'System Health' },
+                { id: 'docker', icon: Box, label: 'Docker Manager' },
+                { id: 'minecraft', icon: Hammer, label: 'Minecraft' },
+                { id: 'streaming', icon: Film, label: 'Cinema' },
+                { id: 'storage', icon: Database, label: 'Aurora-Nova' },
+                { id: 'settings', icon: Cog, label: 'Settings' }
+            ];
 
-        return (
-            <div className={`flex h-screen w-full ${theme.bg} transition-colors duration-700 font-sans overflow-hidden relative`}>
-            <ParticleBackground theme={theme} />
-            <aside className={`fixed md:relative top-0 left-0 h-full w-64 ${theme.sidebar} backdrop-blur-2xl transition-transform duration-300 ease-out z-40 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} pt-16 md:pt-0`}>
-                <div className="p-8 mb-2 hidden md:block"><div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}><div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20"><Zap size={18} fill="currentColor"/></div>AURORA</div><div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div></div>
-                <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">{navItems.map(item => (<button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}><item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} /><span className="text-sm tracking-wide">{item.label}</span>{activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}</button>))}</nav>
-                <div className={`p-6 mt-auto`}><button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}><LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/><span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span></button></div>
-            </aside>
-            <main className="flex-1 overflow-y-auto p-4 md:p-10 relative scrollbar-thin scrollbar-thumb-slate-700/20 z-10">
-                <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4"><div className="flex flex-col"><h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2></div><div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}><div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div><div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div><div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div></div></header>
-                
-                {/* VIEWS */}
-                {activeTab === 'neural' && <NeuralView theme={theme} username={user.username} />}
-                {activeTab === 'telemetry' && <TelemetryView theme={theme} />}
-                {activeTab === 'health' && <SystemLogsView theme={theme} />}
-                {activeTab === 'health_monitor' && <HealthMonitorView theme={theme} username={user.username} />} 
-                {activeTab === 'docker' && <DockerView theme={theme} username={user.username} />}
-                {activeTab === 'minecraft' && <MinecraftView theme={theme} />}
-                {activeTab === 'streaming' && <StreamingView theme={theme} />}
-                {activeTab === 'borealis' && <BorealisView theme={theme} avatar={avatar} />}
-                {activeTab === 'storage' && <StorageView theme={theme} />}
-                {activeTab === 'settings' && <SettingsView username={user.username} userEmail={user.email} theme={theme} setTheme={setTheme} avatar={avatar} setAvatar={setAvatar} />}
-            </main>
-            </div>
-        );
+            return (
+                <div className={`flex h-screen w-full ${theme.bg} transition-colors duration-700 font-sans overflow-hidden relative`}>
+                    <ParticleBackground theme={theme} />
+                    
+                    {/* SIDEBAR */}
+                    <aside className={`fixed md:relative top-0 left-0 h-full w-64 ${theme.sidebar} backdrop-blur-2xl transition-transform duration-300 ease-out z-40 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} pt-16 md:pt-0`}>
+                        <div className="p-8 mb-2 hidden md:block">
+                            <div className={`text-xl font-bold tracking-tight flex items-center gap-3 ${theme.text}`}>
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/20"><Zap size={18} fill="currentColor"/></div>
+                                AURORA
+                            </div>
+                            <div className={`text-xs ${theme.textDim} mt-2 font-medium tracking-wide pl-11`}>OS v3.2.0</div>
+                        </div>
+
+                        {/* Mobile Close Button */}
+                        <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden absolute top-4 right-4 text-slate-400 hover:text-white">
+                            <X size={24} />
+                        </button>
+
+                        <nav className="flex-1 px-4 space-y-1 overflow-y-auto py-4">
+                            {navItems.map(item => (
+                                <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 group relative overflow-hidden ${activeTab === item.id ? `${theme.accentBg} ${theme.accent} font-bold shadow-md` : `${theme.textDim} hover:bg-slate-500/10 hover:${theme.text}`}`}>
+                                    <item.icon size={20} className={activeTab === item.id ? 'animate-pulse' : ''} strokeWidth={activeTab === item.id ? 2.5 : 2} />
+                                    <span className="text-sm tracking-wide">{item.label}</span>
+                                    {activeTab === item.id && <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 rounded-r-full bg-current`}></div>}
+                                </button>
+                            ))}
+                        </nav>
+                        
+                        <div className={`p-6 mt-auto`}>
+                            <button onClick={handleLogout} className={`w-full p-3.5 rounded-xl ${theme.id === 'light' ? 'bg-slate-100 border border-slate-200' : 'bg-white/5 border border-white/5'} flex items-center justify-center gap-2 hover:bg-rose-500/10 hover:border-rose-500/20 hover:text-rose-400 transition-all group`}>
+                                <LogOut size={18} className={`${theme.textDim} group-hover:text-rose-400`}/>
+                                <span className={`text-xs font-bold ${theme.textDim} group-hover:text-rose-400`}>LOG OUT</span>
+                            </button>
+                        </div>
+                    </aside>
+
+                    {/* MAIN CONTENT */}
+                    <main className="flex-1 overflow-y-auto p-4 md:p-10 relative scrollbar-thin scrollbar-thumb-slate-700/20 z-10">
+                        {/* Mobile Menu Button */}
+                        <div className="md:hidden absolute top-4 left-4 z-50">
+                            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-slate-800/80 backdrop-blur rounded text-white border border-white/10"><Menu size={24}/></button>
+                        </div>
+
+                        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4 pl-12 md:pl-0">
+                            <div className="flex flex-col">
+                                <h2 className={`text-2xl font-bold tracking-tight ${theme.text}`}>{navItems.find(n => n.id === activeTab)?.label}</h2>
+                            </div>
+                            <div className={`hidden md:flex items-center gap-6 text-xs font-medium ${theme.textDim} ${theme.panel} px-6 py-2.5 rounded-full border ${theme.border} shadow-sm`}>
+                                <div className="flex items-center gap-2 text-emerald-400 font-bold shadow-emerald-400/20 drop-shadow-sm"><Activity size={14} /> UPTIME: {serverUptime.d}d {serverUptime.h}h {serverUptime.m}m</div>
+                                <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
+                                <div className="flex items-center gap-2"><Globe size={14} /> STOCKHOLM</div>
+                                <div className={`h-4 w-px ${theme.id === 'light' ? 'bg-slate-300' : 'bg-white/10'}`}></div>
+                                <div className={`flex items-center gap-2 ${theme.textDim}`}><Clock size={14} /> {currentTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                            </div>
+                        </header>
+                        
+                        {/* VIEWS */}
+                        <div className="animate-fade-in">
+                            {activeTab === 'neural' && <NeuralView theme={theme} username={user.username} />}
+                            {activeTab === 'telemetry' && <TelemetryView theme={theme} />}
+                            {activeTab === 'health' && <SystemLogsView theme={theme} />}
+                            {activeTab === 'health_monitor' && <HealthMonitorView theme={theme} username={user.username} />} 
+                            {activeTab === 'docker' && <DockerView theme={theme} username={user.username} />}
+                            {activeTab === 'minecraft' && <MinecraftView theme={theme} />}
+                            {activeTab === 'streaming' && <StreamingView theme={theme} />}
+                            {activeTab === 'borealis' && <BorealisView theme={theme} avatar={avatar} />}
+                            {activeTab === 'storage' && <StorageView theme={theme} />}
+                            {activeTab === 'settings' && <SettingsView username={user.username} userEmail={user.email} theme={theme} setTheme={setTheme} avatar={avatar} setAvatar={setAvatar} navItems={navItems} />}
+                        </div>
+                    </main>
+                </div>
+            );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
