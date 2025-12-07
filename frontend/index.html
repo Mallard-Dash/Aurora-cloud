@@ -927,21 +927,34 @@ const HealthMonitorView = ({ theme, username }) => {
                 { id: 'photos', label: 'Photos', icon: ImageIcon, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20', desc: 'Memories & Albums' }
             ];
 
-            const checkStatus = async () => {
-                const res = await authFetch('/api/docker/containers');
-                if (res && res.ok) {
-                    const containers = await res.json();
-                    const jf = containers.find(c => c.image.includes('jellyfin'));
-                    setStatus(jf && jf.status === 'running' ? 'running' : 'stopped');
-                }
-            };
+        const checkStatus = async () => {
+                        const res = await authFetch('/api/docker/containers');
+                        if (res && res.ok) {
+                            const containers = await res.json();
+                            // ÄNDRING: Vi letar specifikt efter namnet 'aurora-media'
+                            const jf = containers.find(c => c.name === '/aurora-media' || c.name === 'aurora-media');
+                            
+                            // Fallback: Om vi inte hittar namnet, leta efter image 'jellyfin'
+                            const fallback = containers.find(c => c.image.includes('jellyfin'));
+                            
+                            const target = jf || fallback;
+                            setStatus(target && target.status === 'running' ? 'running' : 'stopped');
+                        }
+                    };
             useEffect(() => { checkStatus(); }, []);
-
+            
             const installJellyfin = async () => {
-                setStatus('installing');
-                await authFetch('/api/docker/containers/create', { method: 'POST', body: JSON.stringify({ name: 'aurora-media', template: 'jellyfin' }) });
-                setTimeout(checkStatus, 5000);
-            };
+                            setStatus('installing');
+                            // Denna anropar din backend för att skapa containern om den saknas
+                            await authFetch('/api/docker/containers/create', { 
+                                method: 'POST', 
+                                body: JSON.stringify({ 
+                                    name: 'aurora-media', 
+                                    template: 'jellyfin' // Se till att mallen i templates.json mappar port 8096!
+                                }) 
+                            });
+                            setTimeout(checkStatus, 5000);
+                        };
             const activeCatData = categories.find(c => c.id === activeCategory);
 
             return (
